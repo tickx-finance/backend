@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountService } from './account.service';
+import { AccountController } from './account.controller';
 import { LedgerService } from './services/ledger.service';
 import { WalService } from './services/wal.service';
 import { BalanceStoreService } from './services/balance-store.service';
@@ -14,7 +15,7 @@ import { SocketModule } from '../socket/socket.module';
         TypeOrmModule.forFeature([LedgerEntry, LedgerSnapshot]),
         SocketModule
     ],
-    controllers: [],
+    controllers: [AccountController],
     providers: [
         AccountService,
         LedgerService,

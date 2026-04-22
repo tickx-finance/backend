@@ -23,6 +23,14 @@ export interface BalanceDelta {
     locked: string;   // Decimal represented as string
 }
 
+export function validateBalanceDelta(delta: BalanceDelta): boolean {
+    // check is not NaN
+    if (isNaN(Number(delta.free)) || isNaN(Number(delta.freeTap)) || isNaN(Number(delta.locked))) {
+        return false;
+    }
+    return true;
+}
+
 export interface BalanceSnapshot {
     free: string;
     freeTap: string;

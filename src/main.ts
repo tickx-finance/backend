@@ -46,6 +46,7 @@ async function bootstrap() {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Tapfun Bot API')
       .setVersion('0.0.12')
+      .addBearerAuth()
       .build();
 
     const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);

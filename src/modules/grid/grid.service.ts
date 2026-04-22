@@ -3,6 +3,7 @@ import { PriceService } from '../price/price.service';
 import { Cell, signCell } from 'src/libs/cell';
 import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 import { env } from 'src/config';
+import { normalizePrice } from 'src/libs/market.config';
 
 const TIME_CELL = 5.0 * 1000;
 const PRICE_CELL = 25.0;
@@ -34,7 +35,7 @@ export class GridService implements OnModuleInit {
     @Inject(EVENT_PUBLISHER)
     private readonly eventPublisher: EventPublisher,
     private readonly priceService: PriceService,
-  ) {}
+  ) { }
   onModuleInit() {
     this.startSnapshotLoop();
   }
@@ -96,8 +97,8 @@ export class GridService implements OnModuleInit {
             gridTs,
             startTs,
             endTs,
-            lowerPrice: lowerPrice.toFixed(2),
-            upperPrice: upperPrice.toFixed(2),
+            lowerPrice: normalizePrice(lowerPrice),
+            upperPrice: normalizePrice(upperPrice),
             rewardRate: rewardRate.toFixed(6),
             gridSignature: ``,
           };

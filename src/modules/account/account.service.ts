@@ -5,7 +5,7 @@ import { ShardQueueService } from './services/shard-queue.service';
 import { WalService } from './services/wal.service';
 import { LedgerService } from './services/ledger.service';
 import { BalanceStoreService } from './services/balance-store.service';
-import { EconomicEventType, BalanceDelta, BalanceState } from './types';
+import { EconomicEventType, BalanceDelta, BalanceState, validateBalanceDelta } from './types';
 import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 
 @Injectable()
@@ -202,6 +202,9 @@ export class AccountService {
 
 
     private async processEvent(userId: string, type: EconomicEventType, ref: string, delta: BalanceDelta) {
+        if (!validateBalanceDelta(delta)) {
+            throw new BadRequestException('Invalid balance delta');
+        }
         // 1. Persist Intent (WAL)
         const walRef = await this.wal.appendPrepare(
             this.shardQueue.getShardId(userId),

@@ -23,13 +23,11 @@ export class OrderWorker implements OnModuleInit, OnModuleDestroy {
     }
 
     private async run() {
-        console.log('----------OrderWorker started');
         this.logger.log('OrderWorker started');
 
         while (this.running) {
             try {
                 const priceTick = await this.priceTickChannel.receive();
-                console.log('----------Received price tick', priceTick);
                 await this.orderService.handleSinglePriceTick(priceTick);
             } catch (err) {
                 this.logger.error('Worker loop error', err);

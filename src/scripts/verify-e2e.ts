@@ -6,9 +6,17 @@ import * as crypto from 'crypto';
 import { defaultMarketConfig } from 'src/libs/market.config';
 import { Cell, getCellId, signCell } from 'src/libs/cell';
 import { env } from 'src/config';
+import { EventName } from 'src/modules/socket/types';
+import { BigNumber } from 'bignumber.js';
 
 const API_URL = 'http://localhost:5001/api';
 const WSS_URL = 'http://localhost:5001';
+async function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+let currentGrid: Cell[] = [];
+let currentPrice: number = 0;
 
 async function run() {
     console.log('--- Starting E2E Verification ---');
@@ -41,16 +49,16 @@ async function run() {
         const accessToken = loginRes.data.accessToken;
         console.log(`   Login Success! JWT obtained. ${accessToken}`);
 
+        axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         // 2d. Get WSS Key
-        const wssKeyRes = await axios.get(`${API_URL}/auth/wss-key`, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const wssKeyRes = await axios.get(`${API_URL}/auth/wss-key`);
         const wssKey = wssKeyRes.data.key;
         console.log(`   WSS Key: ${wssKey}`);
 
         // 3. Deposit
         console.log('\n3. Debug Deposit...');
-        const depositAmount = '1000';
+        const depositAmount = '100000';
         await axios.post(`${API_URL}/payment/debug/deposit`, {
-            userId: address,
             amount: depositAmount,
             txHash: ethers.hexlify(ethers.randomBytes(32)),
             logIndex: 0
@@ -91,10 +99,11 @@ async function run() {
             });
         });
 
-        socket.on('subscribed', (data) => {
+        socket.on('subscribed', async (data) => {
             console.log('   [Event] subscribed:', data);
 
             if (data.status === 'success' && data.room.includes('user:')) {
+                await sleep(10000);
                 // 7. Place Order
                 console.log('\n7. Placing Order via WSS...');
                 placeOrder(socket, address, wssKey);
@@ -106,14 +115,17 @@ async function run() {
         });
 
         // Listen for all events
-        const events = [
-            'grid_update', 'balance_update', 'order_update', 'deposit_success',
-            'withdraw_queued', 'withdraw_cancelled', 'withdraw_success', 'error'
-        ];
+        const events = Object.values(EventName);
 
         events.forEach(evt => {
             socket.on(evt, (data) => {
-                console.log(`   [Event] ${evt}:`, JSON.stringify(data, null, 2));
+                if (evt === EventName.GridUpdate) {
+                    currentGrid = data;
+                } else if (evt === EventName.PriceNow) {
+                    currentPrice = data.price;
+                } else {
+                    console.log(`   [Event] ${evt}:`, JSON.stringify(data, null, 2));
+                }
             });
         });
 
@@ -130,46 +142,47 @@ async function run() {
     }
 }
 
-function placeOrder(socket: Socket, userId: string, wssKey: string) {
+async function placeOrder(socket: Socket, userId: string, wssKey: string) {
     const marketId = 'BTCUSDT';
     const amount = '100';
 
-    // Create a dummy cell
-    const now = Date.now();
-    const startTs = now + 60000 - (now % defaultMarketConfig.gridXSize); // Next minute
+    while (true) {
+        if (!currentGrid.length || !currentPrice) {
+            await sleep(1000);
+            continue;
+        }
+        // Create a dummy cell
+        const now = Date.now();
+        const firstValidCells = currentGrid.filter(cell => cell.startTs > now + defaultMarketConfig.gridXSize);
+        if (!firstValidCells.length) {
+            await sleep(1000);
+            continue;
+        }
 
-    // Cell matching logic
+        const cell = firstValidCells.find(cell => BigNumber(cell.lowerPrice).lte(currentPrice) && BigNumber(cell.upperPrice).gte(currentPrice))
+        if (!cell) {
+            await sleep(1000);
+            continue;
+        }
 
-    const cell: Cell = {
-        gridTs: startTs,
-        startTs: startTs,
-        endTs: startTs + defaultMarketConfig.gridXSize,
-        lowerPrice: '90',
-        upperPrice: '110',
-        rewardRate: '2',
-        gridSignature: ''
+        const message = `${cell.gridTs}:${getCellId(cell)}:${amount}`;
+        const hmac = crypto.createHmac('sha256', Buffer.from(wssKey, 'hex'));
+        hmac.update(message);
+        const signature = hmac.digest('hex');
+
+        const payload = {
+            userId,
+            marketId,
+            amount,
+            cell,
+            userSignature: signature
+        };
+
+        console.log('   Sending place_bet:', payload);
+        socket.emit('place_bet', payload);
+        await sleep(5000);
     }
-    cell.gridSignature = signCell(cell, env.secret.cellSignerKey)
 
-    // Signature for PlaceBet: HMAC(userId + ...? No)
-    // Backend: message = `${cell.gridTs}:${cell.id}:${amount}`
-    // authService.validateWssSignature(userId, message, userSignature, false) -> No challenge
-
-    const message = `${cell.gridTs}:${getCellId(cell)}:${amount}`;
-    const hmac = crypto.createHmac('sha256', Buffer.from(wssKey, 'hex'));
-    hmac.update(message);
-    const signature = hmac.digest('hex');
-
-    const payload = {
-        userId,
-        marketId,
-        amount,
-        cell,
-        userSignature: signature
-    };
-
-    console.log('   Sending place_bet:', payload);
-    socket.emit('place_bet', payload);
 }
 
 run();

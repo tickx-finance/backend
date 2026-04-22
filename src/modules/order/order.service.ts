@@ -72,8 +72,6 @@ export class OrderService implements OnModuleInit {
     }
 
     async handleSinglePriceTick(priceTick: PriceTick) {
-        this.logger.debug(`Processing price tick ${priceTick.timestamp}`);
-
         const settledStartTs = getSettledStartTs(priceTick.timestamp);
 
         // 1️⃣ Winning bucket
@@ -85,6 +83,7 @@ export class OrderService implements OnModuleInit {
                     BigNumber(priceTick.price).lte(order.upperPrice) &&
                     BigNumber(priceTick.price).gte(order.lowerPrice);
                 if (win) {
+                    this.logger.debug(`Order ${order.orderId} won at ${priceTick.timestamp}`);
                     winSettlePromises.push(this.settleOrder(order, priceTick.timestamp, true));
                 }
             }
@@ -96,6 +95,7 @@ export class OrderService implements OnModuleInit {
         for (const [bucketStartTs, bucket] of this.activeOrdersByBucket) {
             if (bucketStartTs + defaultMarketConfig.gridXSize < priceTick.timestamp) {
                 for (const order of bucket.values()) {
+                    this.logger.debug(`Order ${order.orderId} expired at ${priceTick.timestamp}`);
                     expireSettlePromises.push(this.settleOrder(order, priceTick.timestamp, false));
                 }
             }
@@ -271,4 +271,20 @@ export class OrderService implements OnModuleInit {
             },
         });
     }
+
+    async getUserOrders(userId: string, status?: OrderStatus, limit: number = 20, offset: number = 0): Promise<Order[]> {
+        const where: any = { userId };
+        if (status) {
+            where.status = status;
+        }
+        return this.orderRepository.find({
+            where,
+            take: limit,
+            skip: offset,
+            order: {
+                placedAt: 'DESC',
+            },
+        });
+    }
+
 }

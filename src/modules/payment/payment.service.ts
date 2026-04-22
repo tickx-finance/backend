@@ -203,4 +203,45 @@ export class PaymentService {
             timestamp: Date.now(),
         });
     }
+    /**
+     * Get user deposits
+     */
+    async getUserDeposits(userId: string, limit: number = 20, offset: number = 0) {
+        return this.depositRepo.find({
+            where: { userId },
+            take: limit,
+            skip: offset,
+            order: {
+                logIndex: 'DESC', // Assuming logIndex/id correlates with time, or add createdAt if available. using logIndex for now.
+            },
+        });
+    }
+
+    /**
+     * Get active withdrawal session
+     */
+    async getActiveWithdrawalSession(userId: string) {
+        return this.withdrawalSessionRepo.findOne({
+            where: { userId, status: WithdrawalStatus.OPEN }
+        });
+    }
+
+    /**
+     * Get user withdrawals
+     */
+    async getUserWithdrawals(userId: string, status?: WithdrawalStatus, limit: number = 20, offset: number = 0) {
+        const where: any = { userId };
+        if (status) {
+            where.status = status;
+        }
+        return this.withdrawalHistoryRepo.find({
+            where,
+            take: limit,
+            skip: offset,
+            order: {
+                logIndex: 'DESC',
+            },
+        });
+    }
 }
+
