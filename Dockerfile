@@ -1,49 +1,34 @@
-# ----------------------
-# 1. BUILD STAGE
-# ----------------------
-FROM node:23-slim AS builder
+# Use a lightweight Node.js image for the build stage
+FROM node:20.18.1-alpine3.21 AS builder
 
+# Set the working directory inside the container
 WORKDIR /usr/src/app
 
+# Copy only package.json and yarn.lock to install dependencies first (for better cache)
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
 
+# Install dependencies using Yarn (only production dependencies)
+RUN yarn install --frozen-lockfile --production=false
+
+
+# Copy the rest of the application code and build the NestJS application
 COPY . .
-RUN yarn typechain:gen
 RUN yarn build
 
-# ----------------------
-# 2. RUN STAGE
-# ----------------------
-FROM node:23-slim AS runner
+# Use a smaller base image for the final stage
+FROM node:20.18.1-alpine3.21 AS runner
 
-WORKDIR /usr/src/app
+# Set NODE_ENV to production for runtime optimizations
 ENV NODE_ENV=production
 
-# Chromium runtime + dependencies
-RUN apt-get update && apt-get install -y \
-    chromium \
-    fonts-liberation \
-    libnss3 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxcb1 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libasound2 \
-    --no-install-recommends && \
-    rm -rf /var/lib/apt/lists/*
+# Set the working directory inside the container
+WORKDIR /usr/src/app
 
-ENV CHROMIUM_PATH="/usr/bin/chromium"
+# Copy only the required files
+COPY --from=builder /usr/src/app/ ./
 
-COPY --from=builder /usr/src/app ./
-
+# Expose the port
 EXPOSE 5050
+
+# Command to run only echo 1
 CMD ["yarn", "start"]
