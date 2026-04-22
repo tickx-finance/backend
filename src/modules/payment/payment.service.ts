@@ -128,7 +128,7 @@ export class PaymentService {
     /**
      * Finalizes a withdrawal session using the on-chain tx hash.
      */
-    async finalizeWithdrawal(sessionId: string, txHash: string) {
+    async finalizeWithdrawal(sessionId: string, txHash: string, logIndex: number) {
         const session = await this.withdrawalSessionRepo.findOne({ where: { sessionId } });
         if (!session) {
             throw new NotFoundException(PaymentErrorCode.SESSION_NOT_FOUND);
@@ -143,8 +143,6 @@ export class PaymentService {
         }
 
         // Apply to Account Service
-        // We use dummy logIndex 0 for withdrawal success event usually, or parse it from receipts
-        const logIndex = 0;
         await this.accountService.withdrawSucceeded(session.userId, session.amount, txHash, logIndex);
 
         // Update Session

@@ -16,6 +16,7 @@ interface WithdrawRequestDto {
 interface FinalizeWithdrawalDto {
     sessionId: string;
     txHash: string;
+    logIndex: number;
 }
 
 @Controller('payment')
@@ -36,7 +37,7 @@ export class PaymentController {
 
     @Post('debug/finalize-withdrawal')
     async debugFinalizeWithdrawal(@Body() dto: FinalizeWithdrawalDto) {
-        return this.paymentService.finalizeWithdrawal(dto.sessionId, dto.txHash);
+        return this.paymentService.finalizeWithdrawal(dto.sessionId, dto.txHash, dto.logIndex);
     }
 
     @Post('debug/expire-timeout')

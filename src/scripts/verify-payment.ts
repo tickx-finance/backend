@@ -105,7 +105,7 @@ async function runVerification() {
         // 3. Finalize Withdrawal
         console.log('--- Step 3: Finalize Withdrawal ---');
         const withdrawTxHash = `0xdff6f46aafa7014e109b1836c68c052c126277648d3d016bc42cbb7731061a86`;
-        const finalized = await paymentService.finalizeWithdrawal(session.sessionId, withdrawTxHash);
+        const finalized = await paymentService.finalizeWithdrawal(session.sessionId, withdrawTxHash, 1);
 
         console.log(`Withdrawal finalized: ${JSON.stringify(finalized)}`);
 
