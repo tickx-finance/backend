@@ -12,7 +12,6 @@ import { PriceTick } from 'src/libs/price-tick';
 import { defaultMarketConfig, getSettledStartTs } from 'src/libs/market.config';
 import { BigNumber } from 'bignumber.js';
 import { env } from 'src/config';
-import { getCachedCell } from 'src/libs/grid-cacher';
 
 @Injectable()
 export class OrderService implements OnModuleInit {
@@ -113,16 +112,9 @@ export class OrderService implements OnModuleInit {
         }
 
         // b. Cell signature check
-        const cachedCell = getCachedCell(dto.cell.gridTs, dto.cell.startTs, dto.cell.lowerPrice);
-        if (cachedCell) {
-            if (cachedCell.gridSignature !== dto.cell.gridSignature) {
-                throw new Error("Invalid cell signature");
-            }
-        } else {
-            const expectedSignature = signCell(dto.cell, env.secret.cellSignerKey);
-            if (dto.cell.gridSignature !== expectedSignature) {
-                throw new Error("Invalid cell signature");
-            }
+        const expectedSignature = signCell(dto.cell, env.secret.cellSignerKey);
+        if (dto.cell.gridSignature !== expectedSignature) {
+            throw new Error("Invalid cell signature");
         }
 
         // 1. Rate Limit

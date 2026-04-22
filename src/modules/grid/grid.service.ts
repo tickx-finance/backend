@@ -4,7 +4,6 @@ import { Cell, signCell } from 'src/libs/cell';
 import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 import { env } from 'src/config';
 import { normalizePrice } from 'src/libs/market.config';
-import { gridVersionMap } from 'src/libs/grid-cacher';
 
 const TIME_CELL = 5.0 * 1000;
 const PRICE_CELL = 25.0;
@@ -41,7 +40,7 @@ export class GridService implements OnModuleInit {
 
   onModuleInit() {
     this.startSnapshotLoop();
-    this.deleteGridVersionLoop();
+    // this.deleteGridVersionLoop();
   }
 
   private model(dx: number, dy: number): number {
@@ -64,21 +63,21 @@ export class GridService implements OnModuleInit {
     );
   }
 
-  private deleteGridVersionLoop() {
-    setInterval(() => {
-      const now = Date.now();
-      const expiredGridTsList = Object.keys(gridVersionMap).filter(
-        (gridTsStr) => {
-          const gridTs = Number(gridTsStr);
-          return gridTs + 2 * NX * TIME_CELL < now;
-        },
-      );
+  // private deleteGridVersionLoop() {
+  //   setInterval(() => {
+  //     const now = Date.now();
+  //     const expiredGridTsList = Object.keys(gridVersionMap).filter(
+  //       (gridTsStr) => {
+  //         const gridTs = Number(gridTsStr);
+  //         return gridTs + 2 * NX * TIME_CELL < now;
+  //       },
+  //     );
 
-      for (const gridTs of expiredGridTsList) {
-        delete gridVersionMap[gridTs];
-      }
-    }, 60 * 1000);
-  }
+  //     for (const gridTs of expiredGridTsList) {
+  //       delete gridVersionMap[gridTs];
+  //     }
+  //   }, 60 * 1000);
+  // }
 
   private startSnapshotLoop() {
     setInterval(() => {
@@ -126,10 +125,10 @@ export class GridService implements OnModuleInit {
           const gridSignature = signCell(cell, env.secret.cellSignerKey);
           cell.gridSignature = gridSignature;
 
-          if (!gridVersionMap[gridTs]) gridVersionMap[gridTs] = {};
-          if (!gridVersionMap[gridTs][startTs])
-            gridVersionMap[gridTs][startTs] = {};
-          gridVersionMap[cell.gridTs][cell.startTs][cell.lowerPrice] = cell;
+          // if (!gridVersionMap[gridTs]) gridVersionMap[gridTs] = {};
+          // if (!gridVersionMap[gridTs][startTs])
+          //   gridVersionMap[gridTs][startTs] = {};
+          // gridVersionMap[cell.gridTs][cell.startTs][cell.lowerPrice] = cell;
 
           cells.push(cell);
         }
