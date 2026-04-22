@@ -125,6 +125,8 @@ async function main() {
   const mergedEnv = {
     ...appEnv,
     NODE_ENV: 'test',
+    POSTGRES_TEST_URL: postgresUrl,
+    REDIS_TEST_URL: redisUrl,
     POSTGRES_URL: postgresUrl,
     REDIS_URL: redisUrl,
     POSTGRES_TEST_DB: TEST_DB_NAME,
