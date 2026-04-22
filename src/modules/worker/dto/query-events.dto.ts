@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, Min, IsOptional, IsString } from 'class-validator';
+import { IsInt, Min, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class QueryEventsDto {
@@ -48,24 +48,4 @@ export class QueryEventsDto {
   @IsInt({ message: 'pageSize must be an integer' })
   @Min(1, { message: 'pageSize must be >= 1' })
   pageSize?: number = 20;
-
-  @ApiProperty({
-    description: 'Contract address to filter by',
-    example: '0x60430364ebc71ac11720f012756cea2c294c50de',
-    type: String,
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  contractAddress?: string;
-
-  @ApiProperty({
-    description: 'Epoch ID to filter by',
-    example: '12345',
-    type: String,
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  epochId?: string;
 }

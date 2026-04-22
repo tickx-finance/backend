@@ -89,7 +89,6 @@ export class WorkerController {
         query.toTimestamp,
         query.page,
         query.pageSize,
-        query.contractAddress,
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -136,8 +135,6 @@ export class WorkerController {
         query.toTimestamp,
         query.page,
         query.pageSize,
-        query.contractAddress,
-        query.epochId,
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -180,8 +177,6 @@ export class WorkerController {
         query.toTimestamp,
         query.page,
         query.pageSize,
-        query.contractAddress,
-        query.epochId,
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -224,8 +219,6 @@ export class WorkerController {
         query.toTimestamp,
         query.page,
         query.pageSize,
-        query.contractAddress,
-        query.epochId,
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -268,8 +261,6 @@ export class WorkerController {
         query.toTimestamp,
         query.page,
         query.pageSize,
-        query.contractAddress,
-        query.epochId,
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -312,8 +303,6 @@ export class WorkerController {
         query.toTimestamp,
         query.page,
         query.pageSize,
-        query.contractAddress,
-        query.epochId,
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -356,8 +345,6 @@ export class WorkerController {
         query.toTimestamp,
         query.page,
         query.pageSize,
-        query.contractAddress,
-        query.epochId,
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -400,8 +387,6 @@ export class WorkerController {
         query.toTimestamp,
         query.page,
         query.pageSize,
-        query.contractAddress,
-        query.epochId,
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;

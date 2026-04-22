@@ -65,31 +65,16 @@ export class WorkerService {
     };
   }
 
-  private buildBaseWhere(
-    fromTimestamp: number,
-    toTimestamp: number,
-    contractAddress?: string,
-  ): FindOptionsWhere<any> {
-    const where: FindOptionsWhere<any> = {
-      blockTimestamp: Between(fromTimestamp, toTimestamp),
-    };
-
-    if (contractAddress) {
-      where.contractAddress = contractAddress.toLowerCase();
-    }
-
-    return where;
-  }
-
   // ==================== WorkflowIdUpdate ====================
   async queryWorkflowIdUpdates(
     fromTimestamp: number,
     toTimestamp: number,
     page: number,
     pageSize: number,
-    contractAddress?: string,
   ): Promise<PaginatedResponse<WorkflowIdUpdate>> {
-    const where = this.buildBaseWhere(fromTimestamp, toTimestamp, contractAddress);
+    const where: FindOptionsWhere<WorkflowIdUpdate> = {
+      blockTimestamp: Between(fromTimestamp, toTimestamp),
+    };
     return this.queryWithPagination(this.workflowIdUpdateRepo, where, page, pageSize);
   }
 
@@ -99,13 +84,10 @@ export class WorkerService {
     toTimestamp: number,
     page: number,
     pageSize: number,
-    contractAddress?: string,
-    epochId?: string,
   ): Promise<PaginatedResponse<PriceIntegrityBatch>> {
-    const where = this.buildBaseWhere(fromTimestamp, toTimestamp, contractAddress);
-    if (epochId) {
-      where.epochId = epochId;
-    }
+    const where: FindOptionsWhere<PriceIntegrityBatch> = {
+      blockTimestamp: Between(fromTimestamp, toTimestamp),
+    };
     return this.queryWithPagination(this.priceIntegrityBatchRepo, where, page, pageSize);
   }
 
@@ -115,13 +97,10 @@ export class WorkerService {
     toTimestamp: number,
     page: number,
     pageSize: number,
-    contractAddress?: string,
-    epochId?: string,
   ): Promise<PaginatedResponse<BatchSubmitted>> {
-    const where = this.buildBaseWhere(fromTimestamp, toTimestamp, contractAddress);
-    if (epochId) {
-      where.epochId = epochId;
-    }
+    const where: FindOptionsWhere<BatchSubmitted> = {
+      blockTimestamp: Between(fromTimestamp, toTimestamp),
+    };
     return this.queryWithPagination(this.batchSubmittedRepo, where, page, pageSize);
   }
 
@@ -131,13 +110,10 @@ export class WorkerService {
     toTimestamp: number,
     page: number,
     pageSize: number,
-    contractAddress?: string,
-    batchId?: string,
   ): Promise<PaginatedResponse<SettlementBatch>> {
-    const where = this.buildBaseWhere(fromTimestamp, toTimestamp, contractAddress);
-    if (batchId) {
-      where.batchId = batchId;
-    }
+    const where: FindOptionsWhere<SettlementBatch> = {
+      blockTimestamp: Between(fromTimestamp, toTimestamp),
+    };
     return this.queryWithPagination(this.settlementBatchRepo, where, page, pageSize);
   }
 
@@ -147,13 +123,10 @@ export class WorkerService {
     toTimestamp: number,
     page: number,
     pageSize: number,
-    contractAddress?: string,
-    epochId?: string,
   ): Promise<PaginatedResponse<SolvencyReport>> {
-    const where = this.buildBaseWhere(fromTimestamp, toTimestamp, contractAddress);
-    if (epochId) {
-      where.epochId = epochId;
-    }
+    const where: FindOptionsWhere<SolvencyReport> = {
+      blockTimestamp: Between(fromTimestamp, toTimestamp),
+    };
     return this.queryWithPagination(this.solvencyReportRepo, where, page, pageSize);
   }
 
@@ -163,13 +136,10 @@ export class WorkerService {
     toTimestamp: number,
     page: number,
     pageSize: number,
-    contractAddress?: string,
-    epochId?: string,
   ): Promise<PaginatedResponse<LPDistributionRequest>> {
-    const where = this.buildBaseWhere(fromTimestamp, toTimestamp, contractAddress);
-    if (epochId) {
-      where.epochId = epochId;
-    }
+    const where: FindOptionsWhere<LPDistributionRequest> = {
+      blockTimestamp: Between(fromTimestamp, toTimestamp),
+    };
     return this.queryWithPagination(this.lpDistributionRequestRepo, where, page, pageSize);
   }
 
@@ -179,13 +149,10 @@ export class WorkerService {
     toTimestamp: number,
     page: number,
     pageSize: number,
-    contractAddress?: string,
-    receiver?: string,
   ): Promise<PaginatedResponse<ReserveAllocated>> {
-    const where = this.buildBaseWhere(fromTimestamp, toTimestamp, contractAddress);
-    if (receiver) {
-      where.receiver = receiver.toLowerCase();
-    }
+    const where: FindOptionsWhere<ReserveAllocated> = {
+      blockTimestamp: Between(fromTimestamp, toTimestamp),
+    };
     return this.queryWithPagination(this.reserveAllocatedRepo, where, page, pageSize);
   }
 
@@ -195,13 +162,10 @@ export class WorkerService {
     toTimestamp: number,
     page: number,
     pageSize: number,
-    contractAddress?: string,
-    regimeId?: string,
   ): Promise<PaginatedResponse<VolatilityRegime>> {
-    const where = this.buildBaseWhere(fromTimestamp, toTimestamp, contractAddress);
-    if (regimeId) {
-      where.regimeId = regimeId;
-    }
+    const where: FindOptionsWhere<VolatilityRegime> = {
+      blockTimestamp: Between(fromTimestamp, toTimestamp),
+    };
     return this.queryWithPagination(this.volatilityRegimeRepo, where, page, pageSize);
   }
 }
