@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Order } from '../order/entities/order.entity';
 import { DepositHistory } from '../payment/entities/deposit-history.entity';
 import { WithdrawalHistory } from '../payment/entities/withdrawal-history.entity';
+import { SettlementBatchCommit } from './entities/settlement-batch-commit.entity';
 import { OrderStatus } from '../order/types';
 import {
   SettlementBatchesResponse,
@@ -29,6 +30,8 @@ export class SettlementService {
     private readonly depositRepository: Repository<DepositHistory>,
     @InjectRepository(WithdrawalHistory)
     private readonly withdrawalRepository: Repository<WithdrawalHistory>,
+    @InjectRepository(SettlementBatchCommit)
+    private readonly commitRepository: Repository<SettlementBatchCommit>,
   ) {}
 
   /**
@@ -69,6 +72,92 @@ export class SettlementService {
 
     return { batches };
   }
+
+  /**
+   * Commit a settlement batch (API 3)
+   */
+  async commitBatch(
+    batchId: string,
+    txHash: string,
+    merkleRoot: string,
+    committedAt: number,
+  ): Promise<{ success: boolean; batchId: string }> {
+    this.logger.debug(
+      `Committing batch: ${batchId}, txHash: ${txHash}, merkleRoot: ${merkleRoot}, committedAt: ${committedAt}`,
+    );
+
+    // Check if batch already committed
+    const existing = await this.commitRepository.findOne({
+      where: { batchId },
+    });
+
+    if (existing) {
+      this.logger.warn(`Batch ${batchId} already committed, updating...`);
+      existing.txHash = txHash;
+      existing.merkleRoot = merkleRoot;
+      existing.committedAt = committedAt;
+      await this.commitRepository.save(existing);
+    } else {
+      // Create new commit record
+      const commit = this.commitRepository.create({
+        batchId,
+        txHash,
+        merkleRoot,
+        committedAt,
+      });
+      await this.commitRepository.save(commit);
+    }
+
+    this.logger.log(`Batch ${batchId} committed successfully`);
+
+    return {
+      success: true,
+      batchId,
+    };
+  }
+
+  /**
+   * Get committed batches by committedAt time window (API Query)
+   * Query batches where committedAt is between windowStart and windowEnd
+   */
+  async getCommittedBatches(
+    windowStart: number,
+    windowEnd: number,
+  ): Promise<SettlementBatchCommit[]> {
+    this.logger.debug(
+      `Fetching committed batches: committedAt between ${windowStart} and ${windowEnd}`,
+    );
+
+    const commits = await this.commitRepository.find({
+      where: {
+        committedAt: Between(windowStart, windowEnd),
+      },
+      order: {
+        committedAt: 'ASC',
+      },
+    });
+
+    this.logger.debug(`Found ${commits.length} committed batches`);
+
+    return commits;
+  }
+
+  /**
+   * Get a single committed batch by batchId
+   */
+  async getCommittedBatch(batchId: string): Promise<SettlementBatchCommit> {
+    const commit = await this.commitRepository.findOne({
+      where: { batchId },
+    });
+
+    if (!commit) {
+      throw new NotFoundException(`Batch ${batchId} not found`);
+    }
+
+    return commit;
+  }
+
+  // ============ Private methods ============
 
   /**
    * Fetch deposits within time window

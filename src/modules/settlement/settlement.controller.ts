@@ -1,7 +1,10 @@
 import {
   Controller,
   Get,
+  Post,
   Query,
+  Param,
+  Body,
   HttpException,
   HttpStatus,
   Logger,
@@ -12,18 +15,20 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiParam,
 } from '@nestjs/swagger';
-
+import { SettlementService } from './settlement.service';
 import { GetSettlementBatchesDto } from './dto/get-settlement-batches.dto';
+import { CommitBatchDto } from './dto/commit-batch.dto';
+import { GetCommittedBatchesDto } from './dto/get-committed-batches.dto';
 import {
   SettlementBatchesResponse,
   SettlementErrorResponse,
 } from './types/settlement.types';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
-import { SettlementService } from './settlement.service';
 
-@ApiTags('Settlement')
-@Controller('settlement')
+@ApiTags('Settlement - Batches')
+@Controller('v1/settlement/batches')
 @ApiBearerAuth('bearer')
 @UseGuards(ApiKeyGuard)
 export class SettlementController {
@@ -31,6 +36,7 @@ export class SettlementController {
 
   constructor(private readonly settlementService: SettlementService) {}
 
+  // ========== API 2: Get Pending Batches ==========
   @Get('pending')
   @ApiOperation({
     summary: 'Get pending settlement batches',
@@ -83,10 +89,7 @@ export class SettlementController {
                     betId: { type: 'string', example: 'order_123' },
                     outcome: { type: 'string', enum: ['WIN', 'LOSS'] },
                     payout: { type: 'string', example: '2000000000000000000' },
-                    originalStake: {
-                      type: 'string',
-                      example: '1000000000000000000',
-                    },
+                    originalStake: { type: 'string', example: '1000000000000000000' },
                   },
                 },
               },
@@ -111,26 +114,6 @@ export class SettlementController {
   @ApiResponse({
     status: 401,
     description: 'Unauthorized - Invalid or missing API key',
-    schema: {
-      type: 'object',
-      properties: {
-        error: { type: 'string', example: 'unauthorized' },
-        message: { type: 'string', example: 'Invalid API key' },
-        retryable: { type: 'boolean', example: false },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error',
-    schema: {
-      type: 'object',
-      properties: {
-        error: { type: 'string', example: 'internal_error' },
-        message: { type: 'string', example: 'Failed to fetch settlement data' },
-        retryable: { type: 'boolean', example: true },
-      },
-    },
   })
   async getPendingBatches(
     @Query() query: GetSettlementBatchesDto,
@@ -172,21 +155,169 @@ export class SettlementController {
 
       return response;
     } catch (error) {
-      // If it's already an HttpException, re-throw it
       if (error instanceof HttpException) {
         throw error;
       }
 
-      // Log unexpected errors
       this.logger.error(
         `Failed to get settlement batches: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
       );
 
-      // Return generic error
       const errorResponse: SettlementErrorResponse = {
         error: 'internal_error',
         message: 'Failed to fetch settlement data',
+        retryable: true,
+      };
+      throw new HttpException(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  // ========== API 3: Commit Batch ==========
+  @Post(':batchId/committed')
+  @ApiOperation({
+    summary: 'Mark a settlement batch as committed',
+    description:
+      'Stores the commit information for a settlement batch including transaction hash and merkle root. Header: Authorization: Bearer {APP_API_KEY}',
+  })
+  @ApiParam({
+    name: 'batchId',
+    description: 'Batch ID (format: batch_YYYY_MM_DD_HH_MM)',
+    example: 'batch_2024_01_01_00_00',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch committed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        batchId: { type: 'string', example: 'batch_2024_01_01_00_00' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid batchId format or parameters',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing API key',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error',
+  })
+  async commitBatch(
+    @Param('batchId') batchId: string,
+    @Body() dto: CommitBatchDto,
+  ): Promise<{ success: boolean; batchId: string }> {
+    try {
+      this.logger.debug(
+        `Commit batch request: ${batchId}, txHash: ${dto.txHash}`,
+      );
+
+      const result = await this.settlementService.commitBatch(
+        batchId,
+        dto.txHash,
+        dto.merkleRoot,
+        dto.committedAt,
+      );
+
+      this.logger.log(`Batch ${batchId} committed successfully`);
+
+      return result;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Failed to commit batch: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
+      const errorResponse: SettlementErrorResponse = {
+        error: 'internal_error',
+        message: 'Failed to commit batch',
+        retryable: true,
+      };
+      throw new HttpException(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  // ========== API Query Committed Batches by Window ==========
+  @Get('committed')
+  @ApiOperation({
+    summary: 'Get committed batches by committedAt time window',
+    description:
+      'Returns all committed settlement batches where committedAt is between windowStart and windowEnd. Query params: windowStart, windowEnd. Header: Authorization: Bearer {APP_API_KEY}',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved committed batches',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          batchId: { type: 'string', example: 'batch_2024_01_01_00_00' },
+          txHash: { type: 'string', example: '0xabc123...' },
+          merkleRoot: { type: 'string', example: '0xmerkle...' },
+          committedAt: { type: 'number', example: 1704068200 },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid parameters',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing API key',
+  })
+  async getCommittedBatches(
+    @Query() query: GetCommittedBatchesDto,
+  ) {
+    try {
+      const { windowStart, windowEnd } = query;
+
+      if (windowEnd <= windowStart) {
+        const errorResponse: SettlementErrorResponse = {
+          error: 'bad_request',
+          message: 'windowEnd must be greater than windowStart',
+          retryable: false,
+        };
+        throw new HttpException(errorResponse, HttpStatus.BAD_REQUEST);
+      }
+
+      this.logger.debug(
+        `Get committed batches: windowStart=${windowStart}, windowEnd=${windowEnd}`,
+      );
+
+      const commits = await this.settlementService.getCommittedBatches(
+        windowStart,
+        windowEnd,
+      );
+
+      this.logger.debug(`Found ${commits.length} committed batches`);
+
+      return commits;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Failed to get committed batches: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
+      const errorResponse: SettlementErrorResponse = {
+        error: 'internal_error',
+        message: 'Failed to fetch committed batches',
         retryable: true,
       };
       throw new HttpException(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
