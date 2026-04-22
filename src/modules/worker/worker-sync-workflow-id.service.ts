@@ -71,7 +71,7 @@ export class WorkerServiceSyncWorkflowId implements OnModuleInit {
    * Cron job running every 5 seconds to sync events
    * Pattern: seconds minutes hours day month day_of_week
    */
-  @Cron('*/5 * * * * *')
+  // @Cron('*/5 * * * * *')
   async syncAllEvents() {
     // 1. SET LOCK - Only 1 instance runs at a time
     const isSetLockSuccessful = await RedisLock.setLock(

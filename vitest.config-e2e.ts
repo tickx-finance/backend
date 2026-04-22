@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     include: ['**/*.e2e-spec.ts'],
     setupFiles: ['src/test/setup-e2e.ts'],
+    fileParallelism: false,
     globals: true,
     alias: {
       src: path.resolve(__dirname, './src'),
