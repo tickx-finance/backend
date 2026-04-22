@@ -4,8 +4,9 @@ import { RedisModule } from '@nestjs-modules/ioredis';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { env } from './config';
 import dataSource from './libs/typeorm.config';
-import { PaymentModule } from './modules/payment/payment.module';
+import { PaymentCoreModule } from './modules/payment/payment-core.module';
 import { PaymentWorkerRunner } from './modules/payment/payment-worker-runner.service';
+import { PaymentWorkerHealthController } from './payment-worker-health.controller';
 
 @Module({
     imports: [
@@ -16,8 +17,9 @@ import { PaymentWorkerRunner } from './modules/payment/payment-worker-runner.ser
             url: env.redis.url,
             options: {},
         }),
-        PaymentModule,
+        PaymentCoreModule,
     ],
+    controllers: [PaymentWorkerHealthController],
     providers: [PaymentWorkerRunner],
 })
 export class PaymentWorkerModule { }

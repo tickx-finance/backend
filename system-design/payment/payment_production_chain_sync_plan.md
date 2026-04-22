@@ -267,6 +267,7 @@ Implementation note:
   - dev: `yarn dev:payment-worker`
   - production: `yarn start:payment-worker`
 - The dedicated worker process boots `PaymentWorkerModule`, starts `PaymentChainSyncWorker` and `PaymentWithdrawalExpiryWorker`, and stops both on Nest shutdown.
+- The worker process exposes only `GET /health` on `WORKER_PORT` for Kubernetes probes; payment API controllers remain in the main app process.
 
 ### Rewind Cursor Safely
 
