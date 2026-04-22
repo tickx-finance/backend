@@ -4,6 +4,8 @@ import { Cell, signCell } from 'src/libs/cell';
 import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 import { env } from 'src/config';
 import { normalizePrice } from 'src/libs/market.config';
+import { GridOracleStateService } from './fortress-engine/fortress-oracle-state.service';
+import { FortressStateEngine } from './fortress-engine/fortress-state-engine';
 
 const TIME_CELL = 5.0 * 1000;
 const PRICE_CELL = 25.0;
@@ -36,6 +38,8 @@ export class GridService implements OnModuleInit {
     @Inject(EVENT_PUBLISHER)
     private readonly eventPublisher: EventPublisher,
     private readonly priceService: PriceService,
+    private readonly gridOracleStateService: GridOracleStateService,
+    private readonly fortressStateEngine: FortressStateEngine,
   ) { }
 
   onModuleInit() {
@@ -83,6 +87,10 @@ export class GridService implements OnModuleInit {
     setInterval(() => {
       const latestTrade = this.priceService.getLatestTrade();
       if (!latestTrade) return;
+      const oracleUpdates = this.gridOracleStateService.ingestLatestTrade(latestTrade);
+      for (const oracleUpdate of oracleUpdates) {
+        this.fortressStateEngine.updateOracle(oracleUpdate);
+      }
 
       const { price, ts } = latestTrade;
 
