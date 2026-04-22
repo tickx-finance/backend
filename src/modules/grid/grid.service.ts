@@ -29,15 +29,19 @@ const MODEL_PARAMS = {
   m: 13.869637195218683,
 };
 
+const gridVersionMap: Record<string, Record<string, Record<string, Cell>>> = {};
+
 @Injectable()
 export class GridService implements OnModuleInit {
   constructor(
     @Inject(EVENT_PUBLISHER)
     private readonly eventPublisher: EventPublisher,
     private readonly priceService: PriceService,
-  ) { }
+  ) {}
+
   onModuleInit() {
     this.startSnapshotLoop();
+    this.deleteGridVersionLoop();
   }
 
   private model(dx: number, dy: number): number {
@@ -58,6 +62,26 @@ export class GridService implements OnModuleInit {
       g * y * y * logTerm +
       h * Math.pow(y, 4) * Math.exp(-x / k)
     );
+  }
+
+  getCell(gridTs: number, startTs: number, lowerPrice: number) {
+    return gridVersionMap[gridTs]?.[startTs]?.[lowerPrice] || null;
+  }
+
+  private deleteGridVersionLoop() {
+    setInterval(() => {
+      const now = Date.now();
+      const expiredGridTsList = Object.keys(gridVersionMap).filter(
+        (gridTsStr) => {
+          const gridTs = Number(gridTsStr);
+          return gridTs + 2 * NX * TIME_CELL < now;
+        },
+      );
+
+      for (const gridTs of expiredGridTsList) {
+        delete gridVersionMap[gridTs];
+      }
+    }, 60 * 1000);
   }
 
   private startSnapshotLoop() {
@@ -105,6 +129,11 @@ export class GridService implements OnModuleInit {
 
           const gridSignature = signCell(cell, env.secret.cellSignerKey);
           cell.gridSignature = gridSignature;
+
+          if (!gridVersionMap[gridTs]) gridVersionMap[gridTs] = {};
+          if (!gridVersionMap[gridTs][startTs])
+            gridVersionMap[gridTs][startTs] = {};
+          gridVersionMap[gridTs][startTs][lowerPrice] = cell;
 
           cells.push(cell);
         }
