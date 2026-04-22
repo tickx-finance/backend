@@ -1,0 +1,114 @@
+export enum SocketEvents {
+    // Market Data
+    GRID_UPDATE = 'grid_update',
+
+    // User Data
+    BALANCE_UPDATE = 'balance_update',
+    ORDER_UPDATE = 'order_update',
+    DEPOSIT_SUCCESS = 'deposit_success',
+    WITHDRAW_QUEUED = 'withdraw_queued',
+    WITHDRAW_CANCELLED = 'withdraw_cancelled',
+    WITHDRAW_SUCCESS = 'withdraw_success',
+
+    // System
+    ERROR = 'error',
+}
+
+export enum SocketChannel {
+    GRID = 'grid',
+    USER = 'user', // Requires auth in real app, simplified here
+}
+
+export enum EventName {
+    SubscribeGrid = 'subscribe_grid',
+    UnsubscribeGrid = 'unsubscribe_grid',
+    SubscribeUser = 'subscribe_user',
+    UnsubscribeUser = 'unsubscribe_user',
+    PlaceBet = 'place_bet',
+    GridUpdate = 'grid_update',
+    BalanceUpdate = 'balance_update',
+    OrderUpdate = 'order_update',
+    DepositSuccess = 'deposit_success',
+    WithdrawQueued = 'withdraw_queued',
+    WithdrawCancelled = 'withdraw_cancelled',
+    WithdrawSuccess = 'withdraw_success',
+}
+
+export interface GridUpdateMessage {
+    symbol: string;
+    price: string;
+    grid: any;
+    timestamp: number;
+}
+
+export interface BalanceUpdateMessage {
+    userId: string;
+    free: string;
+    locked: string;
+    freeTap: string;
+    timestamp: number;
+}
+
+export interface OrderUpdateMessage {
+    orderId: string;
+    userId: string;
+    symbol: string;
+    cell: any;
+    placedTimestamp: number;
+    settledTimestamp?: number;
+    settlementResult?: any;
+}
+
+export interface DepositSuccessMessage {
+    txHash: string;
+    logIndex: number;
+    userId: string;
+    amount: string;
+    asset: string;
+    timestamp: number;
+}
+
+export interface WithdrawQueuedMessage {
+    sessionId: string;
+    userId: string;
+    amount: string;
+    asset: string;
+    timestamp: number;
+}
+
+export interface WithdrawCancelledMessage {
+    sessionId: string;
+    userId: string;
+    amount: string;
+    asset: string;
+    timestamp: number;
+}
+
+export interface WithdrawSuccessMessage {
+    userId: string;
+    amount: string;
+    asset: string;
+    timestamp: number;
+    txHash: string;
+    logIndex: number;
+}
+
+export interface SubscribeUserPayload {
+    userId: string;
+    signature: string;
+}
+
+export interface PlaceOrderPayload {
+    userId: string;
+    cell: any;
+    placedTimestamp: number;
+    signature: string;
+}
+
+export function getUserRoom(userId: string): string {
+    return `${SocketChannel.USER}:${userId}`;
+}
+
+export function getGridRoom(): string {
+    return `${SocketChannel.GRID}`;
+}

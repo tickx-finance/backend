@@ -73,8 +73,10 @@ export class AuthService {
         };
     }
 
-    async validateWssSignature(address: string, message: string, signature: string): Promise<boolean> {
-        const storedKey = await this.redis.get(`auth:wss:${ethers.getAddress(address)}`);
+    async validateWssSignature(address: string, message: string, signature: string, withChallenge?: boolean): Promise<boolean> {
+        const normalizedAddress = ethers.getAddress(address);
+        const storedKey = await this.redis.get(`auth:wss:${normalizedAddress}`);
+
         if (!storedKey) {
             return false;
         }
@@ -82,7 +84,15 @@ export class AuthService {
 
         const hmac = crypto.createHmac('sha256', keyBuffer)
             .update(message)
-            .digest('hex');
-        return hmac === signature;
+
+        if (withChallenge) {
+            const challenge = await this.redis.get(`auth:challenge:${normalizedAddress}`);
+            if (!challenge) {
+                return false;
+            }
+            hmac.update(challenge);
+        }
+
+        return hmac.digest('hex') === signature;
     }
 }

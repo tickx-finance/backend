@@ -1,0 +1,57 @@
+import { Injectable } from '@nestjs/common';
+import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { Server } from 'socket.io';
+import { BalanceUpdateMessage, DepositSuccessMessage, EventName, getGridRoom, getUserRoom, GridUpdateMessage, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from './types';
+
+@Injectable()
+@WebSocketGateway({
+    cors: {
+        origin: '*', // TODO: change to production domain
+    },
+})
+export class SocketService {
+    @WebSocketServer() server: Server;
+    constructor() { }
+
+    async emitGridUpdate(msg: GridUpdateMessage) {
+        this.server
+            .to(getGridRoom())
+            .emit(EventName.GridUpdate, msg);
+    }
+
+    async emitBalanceUpdate(msg: BalanceUpdateMessage) {
+        this.server
+            .to(getUserRoom(msg.userId))
+            .emit(EventName.BalanceUpdate, msg);
+    }
+
+    async emitOrderUpdate(msg: OrderUpdateMessage) {
+        this.server
+            .to(getUserRoom(msg.userId))
+            .emit(EventName.OrderUpdate, msg);
+    }
+
+    async emitDepositSuccess(msg: DepositSuccessMessage) {
+        this.server
+            .to(getUserRoom(msg.userId))
+            .emit(EventName.DepositSuccess, msg);
+    }
+
+    async emitWithdrawQueued(msg: WithdrawQueuedMessage) {
+        this.server
+            .to(getUserRoom(msg.userId))
+            .emit(EventName.WithdrawQueued, msg);
+    }
+
+    async emitWithdrawCancelled(msg: WithdrawCancelledMessage) {
+        this.server
+            .to(getUserRoom(msg.userId))
+            .emit(EventName.WithdrawCancelled, msg);
+    }
+
+    async emitWithdrawSuccess(msg: WithdrawSuccessMessage) {
+        this.server
+            .to(getUserRoom(msg.userId))
+            .emit(EventName.WithdrawSuccess, msg);
+    }
+}
