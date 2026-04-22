@@ -14,6 +14,7 @@ import { PaymentModule } from './payment/payment.module';
 import { PriceModule } from './price/price.module';
 import { SocketModule } from './socket/socket.module';
 import { GridModule } from './grid/grid.module';
+import { SettlementModule } from './settlement/settlement.module';
 
 @Module({
     imports: [
@@ -33,6 +34,7 @@ import { GridModule } from './grid/grid.module';
         PaymentModule,
         PriceModule,
         GridModule,
+        SettlementModule,
     ],
 })
 export class AppModule implements OnModuleInit {
