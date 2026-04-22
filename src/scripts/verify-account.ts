@@ -5,12 +5,9 @@ import { AccountModule } from '../modules/account/account.module';
 import { AccountService } from '../modules/account/account.service';
 import { LedgerEntry } from '../modules/account/entities/ledger-entry.entity';
 import { LedgerSnapshot } from '../modules/account/entities/ledger-snapshot.entity';
-import { ACCOUNT_EVENT_PUBLISHER, AccountEventPublisher } from 'src/modules/account/account.events';
+import { MockEventPublisherModule } from './mock-event-publisher';
+import { SocketModule } from 'src/modules/socket/socket.module';
 
-// Mock Socket Service
-class MockEventPublisher implements AccountEventPublisher {
-    async emitBalanceUpdate(msg: any) { console.log(`[MockSocket] BalanceUpdate: ${JSON.stringify(msg)}`); }
-}
 async function runVerification() {
     console.log('Starting verification...');
 
@@ -26,8 +23,8 @@ async function runVerification() {
             AccountModule,
         ],
     })
-        .overrideProvider(ACCOUNT_EVENT_PUBLISHER)
-        .useValue(new MockEventPublisher())
+        .overrideModule(SocketModule)
+        .useModule(MockEventPublisherModule)
         .compile();
 
     const app = moduleFixture.createNestApplication();

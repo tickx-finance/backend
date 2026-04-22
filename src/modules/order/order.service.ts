@@ -4,7 +4,7 @@ import { PlaceOrderDto } from './dto/place-order.dto';
 import { OrderStatus } from './types';
 import { TokenBucket } from 'src/libs/token-bucket';
 import { SocketService } from '../socket/socket.service';
-import { OrderUpdateMessage } from '../socket/types';
+import { EVENT_PUBLISHER, EventPublisher, OrderUpdateMessage } from '../socket/types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { Repository } from 'typeorm';
@@ -12,7 +12,6 @@ import { buildCellFromOrder, signCell } from 'src/libs/cell';
 import { PriceTick } from 'src/libs/price-tick';
 import { defaultMarketConfig, getSettledStartTs } from 'src/libs/market.config';
 import { BigNumber } from 'bignumber.js';
-import { ORDER_EVENT_PUBLISHER, OrderEventPublisher } from './order.events';
 import { env } from 'src/config';
 
 @Injectable()
@@ -30,8 +29,8 @@ export class OrderService implements OnModuleInit {
         @InjectRepository(Order)
         private readonly orderRepository: Repository<Order>,
         private readonly accountService: AccountService,
-        @Inject(ORDER_EVENT_PUBLISHER)
-        private readonly events: OrderEventPublisher,
+        @Inject(EVENT_PUBLISHER)
+        private readonly events: EventPublisher,
     ) {
     }
 

@@ -3,15 +3,18 @@ import {
   Logger,
   OnModuleInit,
   OnModuleDestroy,
+  Inject,
 } from '@nestjs/common';
 import WebSocket from 'ws';
 import { AggTradePayload, LatestPriceState } from 'src/libs/price-tick';
-import { SocketService } from '../socket/socket.service';
+import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 
 @Injectable()
 export class PriceService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PriceService.name);
-  constructor(private readonly socketService: SocketService) {}
+  constructor(
+    @Inject(EVENT_PUBLISHER)
+    private readonly eventPublisher: EventPublisher) { }
 
   // ========================
   // In-memory latest trade
@@ -99,11 +102,10 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
 
       const { price, qty, isSell } = this.latestTrade;
 
-      this.socketService.emitNewPrice(this.latestTrade);
+      this.eventPublisher.emitNewPrice(this.latestTrade);
 
       this.logger.debug(
-        `TRADE PRICE: ${price} | QTY: ${qty} | SIDE: ${
-          isSell ? 'SELL' : 'BUY'
+        `TRADE PRICE: ${price} | QTY: ${qty} | SIDE: ${isSell ? 'SELL' : 'BUY'
         }`,
       );
     }, 100);

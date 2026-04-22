@@ -7,11 +7,12 @@ import { BalanceStoreService } from './services/balance-store.service';
 import { ShardQueueService } from './services/shard-queue.service';
 import { LedgerEntry } from './entities/ledger-entry.entity';
 import { LedgerSnapshot } from './entities/ledger-snapshot.entity';
-import { ACCOUNT_EVENT_PUBLISHER } from './account.events';
+import { SocketModule } from '../socket/socket.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([LedgerEntry, LedgerSnapshot]),
+        SocketModule
     ],
     controllers: [],
     providers: [
@@ -20,15 +21,6 @@ import { ACCOUNT_EVENT_PUBLISHER } from './account.events';
         WalService,
         BalanceStoreService,
         ShardQueueService,
-        // 👇 declare the port
-        {
-            provide: ACCOUNT_EVENT_PUBLISHER,
-            useFactory: () => {
-                throw new Error(
-                    'ACCOUNT_EVENT_PUBLISHER not provided. Did you forget to override it?',
-                );
-            },
-        },
     ],
     exports: [AccountService],
 })

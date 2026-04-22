@@ -1,5 +1,6 @@
 import { Cell } from "src/libs/cell";
 import { OrderStatus } from "../order/types";
+import { LatestPriceState } from "src/libs/price-tick";
 
 export enum SocketEvents {
     // Market Data
@@ -114,3 +115,15 @@ export function getUserRoom(userId: string): string {
 export function getGridRoom(): string {
     return `${SocketChannel.GRID}`;
 }
+
+export interface EventPublisher {
+    emitDepositSuccess(msg: DepositSuccessMessage): Promise<void>;
+    emitWithdrawQueued(msg: WithdrawQueuedMessage): Promise<void>;
+    emitWithdrawCancelled(msg: WithdrawCancelledMessage): Promise<void>;
+    emitWithdrawSuccess(msg: WithdrawSuccessMessage): Promise<void>;
+    emitOrderUpdate(msg: OrderUpdateMessage): Promise<void>;
+    emitBalanceUpdate(msg: BalanceUpdateMessage): Promise<void>;
+    emitNewPrice(price: LatestPriceState): Promise<void>;
+}
+
+export const EVENT_PUBLISHER = Symbol('EVENT_PUBLISHER');

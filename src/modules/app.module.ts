@@ -25,12 +25,12 @@ import { SocketModule } from './socket/socket.module';
             options: {},
         }),
         HealthCheckModule,
-        AccountModule,
         AuthModule,
+        SocketModule,
+        AccountModule,
         OrderModule,
         PaymentModule,
         PriceModule,
-        SocketModule,
     ],
 })
 export class AppModule implements OnModuleInit {

@@ -11,17 +11,11 @@ import { OrderPriceTickChannel } from '../modules/order/price-tick.channel';
 import { PriceTick } from '../libs/price-tick';
 import { defaultMarketConfig } from '../libs/market.config';
 import { BigNumber } from 'bignumber.js';
-import { ORDER_EVENT_PUBLISHER, OrderEventPublisher } from 'src/modules/order/order.events';
 import { Cell, signCell } from 'src/libs/cell';
 import { env } from 'src/config';
 import { Order } from 'src/modules/order/entities/order.entity';
-import { ACCOUNT_EVENT_PUBLISHER, AccountEventPublisher } from 'src/modules/account/account.events';
-
-// Mock Socket Service
-class MockEventPublisher implements OrderEventPublisher, AccountEventPublisher {
-    async emitOrderUpdate(msg: any) { console.log(`[MockSocket] OrderUpdate: ${JSON.stringify(msg)}`); }
-    async emitBalanceUpdate(msg: any) { console.log(`[MockSocket] BalanceUpdate: ${JSON.stringify(msg)}`); }
-}
+import { MockEventPublisherModule } from './mock-event-publisher';
+import { SocketModule } from 'src/modules/socket/socket.module';
 
 async function runVerification() {
     console.log('Starting verification...');
@@ -30,7 +24,6 @@ async function runVerification() {
     const originalDateNow = Date.now;
     Date.now = () => FIXED_NOW;
 
-    const mockEventPublisher = new MockEventPublisher();
 
     const moduleFixture = await Test.createTestingModule({
         imports: [
@@ -41,14 +34,14 @@ async function runVerification() {
                 entities: [LedgerEntry, LedgerSnapshot, Order],
                 synchronize: true,
             }),
+            SocketModule,
+            MockEventPublisherModule,
             AccountModule,
             OrderModule,
         ],
     })
-        .overrideProvider(ORDER_EVENT_PUBLISHER)
-        .useValue(mockEventPublisher)
-        .overrideProvider(ACCOUNT_EVENT_PUBLISHER)
-        .useValue(mockEventPublisher)
+        .overrideModule(SocketModule)
+        .useModule(MockEventPublisherModule)
         .compile();
 
 

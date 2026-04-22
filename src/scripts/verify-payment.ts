@@ -1,9 +1,6 @@
 import { PaymentService } from '../modules/payment/payment.service';
 import { AccountService } from '../modules/account/account.service';
 import { Logger } from '@nestjs/common';
-import { PAYMENT_EVENT_PUBLISHER, PaymentEventPublisher } from 'src/modules/payment/payment.events';
-import { ACCOUNT_EVENT_PUBLISHER, AccountEventPublisher } from 'src/modules/account/account.events';
-import { DepositSuccessMessage, WithdrawQueuedMessage, WithdrawCancelledMessage, WithdrawSuccessMessage } from 'src/modules/socket/types';
 import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -14,24 +11,8 @@ import { WithdrawalSession } from 'src/modules/payment/entities/withdrawal-sessi
 import { DepositHistory } from 'src/modules/payment/entities/deposit-history.entity';
 import { AccountModule } from 'src/modules/account/account.module';
 import { PaymentModule } from 'src/modules/payment/payment.module';
-
-// Mock Socket Service
-class MockEventPublisher implements PaymentEventPublisher, AccountEventPublisher {
-    async emitDepositSuccess(msg: DepositSuccessMessage) {
-        console.log(`[MockSocket] DepositSuccess: ${JSON.stringify(msg)}`);
-    }
-    async emitWithdrawQueued(msg: WithdrawQueuedMessage) {
-        console.log(`[MockSocket] WithdrawQueued: ${JSON.stringify(msg)}`);
-    }
-    async emitWithdrawCancelled(msg: WithdrawCancelledMessage) {
-        console.log(`[MockSocket] WithdrawCancelled: ${JSON.stringify(msg)}`);
-    }
-    async emitWithdrawSuccess(msg: WithdrawSuccessMessage) {
-        console.log(`[MockSocket] WithdrawSuccess: ${JSON.stringify(msg)}`);
-    }
-    async emitBalanceUpdate(msg: any) { console.log(`[MockSocket] BalanceUpdate: ${JSON.stringify(msg)}`); }
-
-}
+import { MockEventPublisherModule } from './mock-event-publisher';
+import { SocketModule } from 'src/modules/socket/socket.module';
 
 async function runVerification() {
     console.log('Starting verification...');
@@ -39,8 +20,6 @@ async function runVerification() {
     const FIXED_NOW = 1768450682526;
     const originalDateNow = Date.now;
     Date.now = () => FIXED_NOW;
-
-    const mockEventPublisher = new MockEventPublisher();
 
     const moduleFixture = await Test.createTestingModule({
         imports: [
@@ -55,10 +34,8 @@ async function runVerification() {
             PaymentModule,
         ],
     })
-        .overrideProvider(PAYMENT_EVENT_PUBLISHER)
-        .useValue(mockEventPublisher)
-        .overrideProvider(ACCOUNT_EVENT_PUBLISHER)
-        .useValue(mockEventPublisher)
+        .overrideModule(SocketModule)
+        .useModule(MockEventPublisherModule)
         .compile();
 
 

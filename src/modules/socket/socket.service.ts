@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { BalanceUpdateMessage, DepositSuccessMessage, EventName, getGridRoom, getUserRoom, GridUpdateMessage, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from './types';
-import { AccountEventPublisher } from '../account/account.events';
-import { OrderEventPublisher } from '../order/order.events';
-import { PaymentEventPublisher } from '../payment/payment.events';
 import { LatestPriceState } from 'src/libs/price-tick';
+import { BalanceUpdateMessage, DepositSuccessMessage, EventName, EventPublisher, getGridRoom, getUserRoom, GridUpdateMessage, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from './types';
 
 @Injectable()
 @WebSocketGateway({
@@ -13,7 +10,7 @@ import { LatestPriceState } from 'src/libs/price-tick';
         origin: '*', // TODO: change to production domain
     },
 })
-export class SocketService implements AccountEventPublisher, OrderEventPublisher, PaymentEventPublisher {
+export class SocketService implements EventPublisher {
     @WebSocketServer() server: Server;
     constructor() { }
 
@@ -59,7 +56,7 @@ export class SocketService implements AccountEventPublisher, OrderEventPublisher
             .emit(EventName.WithdrawSuccess, msg);
     }
 
-    emitNewPrice(price: LatestPriceState) {
+    async emitNewPrice(price: LatestPriceState) {
         const msg = { price: price.price, ts: price.ts }
         this.server
             .emit(EventName.PriceNow, msg);

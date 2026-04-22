@@ -7,8 +7,8 @@ import { WithdrawalSession, WithdrawalStatus } from './entities/withdrawal-sessi
 import { MockOnChainService } from './mock-on-chain.service';
 import { PaymentErrorCode } from './types';
 import { WithdrawalHistory } from './entities/withdrawal-history.entity';
-import { PAYMENT_EVENT_PUBLISHER, PaymentEventPublisher } from './payment.events';
 import { uuidv7 } from 'uuidv7';
+import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 
 @Injectable()
 export class PaymentService {
@@ -23,8 +23,8 @@ export class PaymentService {
         private readonly withdrawalHistoryRepo: Repository<WithdrawalHistory>,
         @InjectRepository(WithdrawalSession)
         private readonly withdrawalSessionRepo: Repository<WithdrawalSession>,
-        @Inject(PAYMENT_EVENT_PUBLISHER)
-        private readonly paymentEventPublisher: PaymentEventPublisher,
+        @Inject(EVENT_PUBLISHER)
+        private readonly paymentEventPublisher: EventPublisher,
     ) { }
 
     /**

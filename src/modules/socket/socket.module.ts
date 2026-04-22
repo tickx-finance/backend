@@ -1,20 +1,20 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
-import { OrderModule } from "../order/order.module";
 import { SocketGateway } from "./socket.gateway";
 import { SocketService } from "./socket.service";
-import { ORDER_EVENT_PUBLISHER } from "../order/order.events";
+import { EVENT_PUBLISHER } from "./types";
+import { OrderModule } from "../order/order.module";
 
 @Module({
-  imports: [AuthModule, OrderModule],
+  imports: [AuthModule, forwardRef(() => OrderModule)],
   providers: [
     SocketGateway,
     SocketService,
     {
-      provide: ORDER_EVENT_PUBLISHER,
+      provide: EVENT_PUBLISHER,
       useExisting: SocketService,
     },
   ],
-  exports: [ORDER_EVENT_PUBLISHER],
+  exports: [EVENT_PUBLISHER]
 })
 export class SocketModule { }

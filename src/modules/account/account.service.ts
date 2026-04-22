@@ -6,7 +6,7 @@ import { WalService } from './services/wal.service';
 import { LedgerService } from './services/ledger.service';
 import { BalanceStoreService } from './services/balance-store.service';
 import { EconomicEventType, BalanceDelta, BalanceState } from './types';
-import { ACCOUNT_EVENT_PUBLISHER, AccountEventPublisher } from './account.events';
+import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 
 @Injectable()
 export class AccountService {
@@ -17,8 +17,8 @@ export class AccountService {
         private readonly wal: WalService,
         private readonly ledger: LedgerService,
         private readonly balanceStore: BalanceStoreService,
-        @Inject(ACCOUNT_EVENT_PUBLISHER)
-        private readonly accountEventPublisher: AccountEventPublisher,
+        @Inject(EVENT_PUBLISHER)
+        private readonly accountEventPublisher: EventPublisher,
     ) { }
 
     async getBalance(userId: string): Promise<BalanceState> {
