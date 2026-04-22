@@ -8,9 +8,9 @@ import {
   Unique,
 } from 'typeorm';
 
-@Entity('workflow_id_updates')
+@Entity('settlement_batches')
 @Unique(['transactionHash', 'logIndex'])
-export class WorkflowIdUpdate {
+export class SettlementBatch {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -33,10 +33,23 @@ export class WorkflowIdUpdate {
   logIndex: number;
 
   @Column({ type: 'varchar' })
-  previousId: string;
+  @Index()
+  batchId: string;
 
   @Column({ type: 'varchar' })
-  newId: string;
+  merkleRoot: string;
+
+  @Column({ type: 'varchar' })
+  totalPayout: string;
+
+  @Column({ type: 'varchar' })
+  withdrawableCap: string;
+
+  @Column({ type: 'varchar' })
+  windowStart: string;
+
+  @Column({ type: 'varchar' })
+  windowEnd: string;
 
   @CreateDateColumn()
   createdAt: Date;

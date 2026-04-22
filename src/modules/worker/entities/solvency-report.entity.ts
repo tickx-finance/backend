@@ -8,9 +8,9 @@ import {
   Unique,
 } from 'typeorm';
 
-@Entity('workflow_id_updates')
+@Entity('solvency_reports')
 @Unique(['transactionHash', 'logIndex'])
-export class WorkflowIdUpdate {
+export class SolvencyReport {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -33,10 +33,20 @@ export class WorkflowIdUpdate {
   logIndex: number;
 
   @Column({ type: 'varchar' })
-  previousId: string;
+  @Index()
+  epochId: string;
 
   @Column({ type: 'varchar' })
-  newId: string;
+  poolBalance: string;
+
+  @Column({ type: 'varchar' })
+  totalLiability: string;
+
+  @Column({ type: 'varchar' })
+  utilizationBps: string;
+
+  @Column({ type: 'varchar' })
+  maxSingleBetExposure: string;
 
   @CreateDateColumn()
   createdAt: Date;

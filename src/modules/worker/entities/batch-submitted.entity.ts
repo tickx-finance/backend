@@ -8,9 +8,9 @@ import {
   Unique,
 } from 'typeorm';
 
-@Entity('workflow_id_updates')
+@Entity('batch_submitted')
 @Unique(['transactionHash', 'logIndex'])
-export class WorkflowIdUpdate {
+export class BatchSubmitted {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -33,10 +33,20 @@ export class WorkflowIdUpdate {
   logIndex: number;
 
   @Column({ type: 'varchar' })
-  previousId: string;
+  @Index()
+  epochId: string;
 
   @Column({ type: 'varchar' })
-  newId: string;
+  scoreBps: string;
+
+  @Column({ type: 'varchar' })
+  ohlcP95Bps: string;
+
+  @Column()
+  isPassed: boolean;
+
+  @Column({ type: 'smallint' })
+  failureFlags: number;
 
   @CreateDateColumn()
   createdAt: Date;

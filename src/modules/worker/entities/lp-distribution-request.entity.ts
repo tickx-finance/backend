@@ -8,9 +8,9 @@ import {
   Unique,
 } from 'typeorm';
 
-@Entity('workflow_id_updates')
+@Entity('lp_distribution_requests')
 @Unique(['transactionHash', 'logIndex'])
-export class WorkflowIdUpdate {
+export class LPDistributionRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -33,10 +33,18 @@ export class WorkflowIdUpdate {
   logIndex: number;
 
   @Column({ type: 'varchar' })
-  previousId: string;
+  @Index()
+  epochId: string;
 
   @Column({ type: 'varchar' })
-  newId: string;
+  amount: string;
+
+  @Column({ type: 'varchar' })
+  dstChainSelector: string;
+
+  @Column({ type: 'varchar' })
+  @Index()
+  receiver: string;
 
   @CreateDateColumn()
   createdAt: Date;

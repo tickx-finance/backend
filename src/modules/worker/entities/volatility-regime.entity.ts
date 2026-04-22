@@ -8,9 +8,9 @@ import {
   Unique,
 } from 'typeorm';
 
-@Entity('workflow_id_updates')
+@Entity('volatility_regimes')
 @Unique(['transactionHash', 'logIndex'])
-export class WorkflowIdUpdate {
+export class VolatilityRegime {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -33,10 +33,14 @@ export class WorkflowIdUpdate {
   logIndex: number;
 
   @Column({ type: 'varchar' })
-  previousId: string;
+  @Index()
+  regimeId: string;
 
   @Column({ type: 'varchar' })
-  newId: string;
+  fortressSpreadBps: string;
+
+  @Column({ type: 'varchar' })
+  maxMultiplier: string;
 
   @CreateDateColumn()
   createdAt: Date;
