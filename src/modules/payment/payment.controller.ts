@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GetDepositsDto } from './dto/get-deposits.dto';
 import { GetWithdrawalsDto } from './dto/get-withdrawals.dto';
+import { ExpireTimeoutDto } from './dto/expire-timeout.dto';
 import { ApiTags, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsString } from 'class-validator';
 
@@ -65,8 +66,8 @@ export class PaymentController {
 
     @Post('debug/expire-timeout')
     @UseGuards(JwtAuthGuard)
-    async debugExpireTimeout(@CurrentUser() user: { address: string }, @Body() body: { sessionId: string }) {
-        return this.paymentService.expireWithdrawal(body.sessionId);
+    async debugExpireTimeout(@CurrentUser() user: { address: string }, @Body() dto: ExpireTimeoutDto) {
+        return this.paymentService.expireWithdrawal(dto.sessionId);
     }
 
     @Get('deposits')
@@ -93,4 +94,3 @@ export class PaymentController {
         return this.paymentService.getUserWithdrawals(user.address, query.status, query.limit, query.offset);
     }
 }
-

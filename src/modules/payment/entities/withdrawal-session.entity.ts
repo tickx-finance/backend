@@ -15,7 +15,7 @@ export class WithdrawalSession {
     @Index()
     userId: string;
 
-    @Column('decimal', { precision: 20, scale: 0 })
+    @Column('decimal', { precision: 30, scale: 9 })
     amount: string;
 
     @Column({
