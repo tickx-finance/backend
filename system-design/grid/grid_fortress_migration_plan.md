@@ -398,20 +398,21 @@ Suggested structure:
 
 Runtime flow:
 
-1. Price Module emits/records 1s OHLCV close.
-2. Grid service updates Fortress state once per closed oracle second.
-3. Pricing cadence:
+1. `GRID_ENGINE=fortress` is the default runtime path. Price Module emits/records 1s OHLCV close.
+2. `GRID_ENGINE=legacy` remains as a deprecated fallback that bypasses the Fortress pipeline and keeps the old polynomial grid generation path.
+3. Grid service updates Fortress state once per closed oracle second.
+4. Pricing cadence:
    - First `FORTRESS_BANDWIDTH_WARMUP_TICKS=100` closed ticks run `runPricing=true` so the engine can publish a warmup quote surface.
    - During warmup, only the final warmup tick sets `refreshBandWidth=true`; earlier warmup ticks keep the current dS and do not run `selectFinalFortressBandWidth`.
    - After warmup, only every `FORTRESS_BANDWIDTH_REFRESH_TICKS=3600` closed ticks runs `runPricing=true` with `refreshBandWidth=true` to refresh adaptive dS and quote surface.
    - All other closed ticks run `runPricing=false`, absorbing oracle price, volatility, jump detection, Hawkes intensity, and ATR without MC/quote work.
-4. When pricing runs, engine rebuilds cells, computes paths/BB `P_raw`, builds quotes, and maps betable quotes to signed legacy `Cell[]`.
-5. Between pricing ticks, socket publishing reuses the last Fortress `Cell[]` surface.
-6. `eventPublisher.emitGridUpdate(cells)` publishes.
+5. When pricing runs, engine rebuilds cells, computes paths/BB `P_raw`, builds quotes, and maps betable quotes to signed legacy `Cell[]`.
+6. Between pricing ticks, socket publishing reuses the last Fortress `Cell[]` surface.
+7. `eventPublisher.emitGridUpdate(cells)` publishes.
 
 Feature flags:
 
-- `GRID_ENGINE=legacy|fortress`
+- `GRID_ENGINE=fortress|legacy` (`fortress` default, `legacy` deprecated fallback)
 - `FORTRESS_BANDWIDTH_WARMUP_TICKS=100`
 - `FORTRESS_BANDWIDTH_REFRESH_TICKS=3600`
 - `FORTRESS_MC_N_MIN`
@@ -420,7 +421,8 @@ Feature flags:
 
 Exit criteria:
 
-- Legacy engine can still be toggled on.
+- Fortress is the default engine.
+- Deprecated legacy engine can still be toggled on with `GRID_ENGINE=legacy`.
 - Fortress engine produces valid signed cells accepted by Order Module.
 - `benchmark:e2e:slo` can run with Fortress grid.
 

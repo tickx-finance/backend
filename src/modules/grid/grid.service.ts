@@ -99,23 +99,24 @@ export class GridService implements OnModuleInit {
     setInterval(() => {
       const latestTrade = this.priceService.getLatestTrade();
       if (!latestTrade) return;
-      const oracleUpdates = this.gridOracleStateService.ingestLatestTrade(latestTrade);
-      for (const oracleUpdate of oracleUpdates) {
-        const cadenceDecision = this.fortressPricingCadence.next();
-        const transition = this.fortressStateEngine.updateOracle(oracleUpdate, {
-          runPricing: cadenceDecision.runPricing,
-          refreshBandWidth: cadenceDecision.refreshBandWidth,
-        });
-        if (cadenceDecision.runPricing && transition.geometry) {
-          this.latestFortressCells = this.buildFortressCells(
-            oracleUpdate.bar.close,
-            oracleUpdate.bar.oracleSecond,
-            transition,
-          );
-        }
-      }
 
       if (env.grid.engine === 'fortress') {
+        const oracleUpdates = this.gridOracleStateService.ingestLatestTrade(latestTrade);
+        for (const oracleUpdate of oracleUpdates) {
+          const cadenceDecision = this.fortressPricingCadence.next();
+          const transition = this.fortressStateEngine.updateOracle(oracleUpdate, {
+            runPricing: cadenceDecision.runPricing,
+            refreshBandWidth: cadenceDecision.refreshBandWidth,
+          });
+          if (cadenceDecision.runPricing && transition.geometry) {
+            this.latestFortressCells = this.buildFortressCells(
+              oracleUpdate.bar.close,
+              oracleUpdate.bar.oracleSecond,
+              transition,
+            );
+          }
+        }
+
         if (this.latestFortressCells.length > 0) {
           this.eventPublisher.emitGridUpdate(this.latestFortressCells);
         }
