@@ -11,6 +11,7 @@ import { FORTRESS_GLOBAL_CONFIG, FORTRESS_MAIN_MODE } from './fortress-engine/fo
 import { buildFortressQuotes } from './fortress-engine/fortress-quote-builder';
 import { mapFortressQuotesToCells } from './fortress-engine/fortress-cell.mapper';
 import { computeFortressAdaptivePWinMatrix } from './fortress-engine/fortress-adaptive-mc';
+import { FortressLiabilityService } from './fortress-engine/fortress-liability.service';
 
 const TIME_CELL = 5.0 * 1000;
 const PRICE_CELL = 25.0;
@@ -51,6 +52,7 @@ export class GridService implements OnModuleInit {
     private readonly priceService: PriceService,
     private readonly gridOracleStateService: GridOracleStateService,
     private readonly fortressStateEngine: FortressStateEngine,
+    private readonly fortressLiabilityService: FortressLiabilityService,
   ) { }
 
   onModuleInit() {
@@ -202,6 +204,9 @@ export class GridService implements OnModuleInit {
       config: FORTRESS_GLOBAL_CONFIG,
       modeState: transition.modeState,
       pRawByCellId: pwin.pRawByCellId,
+      liabilities: this.fortressLiabilityService.getLiabilitiesByFortressCellId(
+        transition.geometry.cells,
+      ),
     });
 
     return mapFortressQuotesToCells(quotes, {

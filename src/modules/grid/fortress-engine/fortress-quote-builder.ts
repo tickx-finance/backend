@@ -98,11 +98,11 @@ export function applyIdleCenterPenalty(
     const rowDistance = Math.abs(Math.trunc(cell.row) - Math.trunc(mode.centerRow));
     const maxWindowIndex = Math.max(0, mode.windows.length - 1);
     if (rowDistance === 0) {
-        const divisor = interpolateByWindow(cell.windowIndex, maxWindowIndex, 1.5, 1.2);
+        const divisor = interpolateByWindow(cell.windowIndex, maxWindowIndex, 1.3, 1.1);
         return Math.max(mFinal / divisor, 1.00);
     }
     if (rowDistance === 1) {
-        const divisor = interpolateByWindow(cell.windowIndex, maxWindowIndex, 1.3, 1.1);
+        const divisor = interpolateByWindow(cell.windowIndex, maxWindowIndex, 1.2, 1.05);
         return Math.max(mFinal / divisor, 1.02);
     }
 

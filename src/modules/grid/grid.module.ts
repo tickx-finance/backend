@@ -5,9 +5,10 @@ import { PriceModule } from '../price/price.module';
 import { SocketModule } from '../socket/socket.module';
 import { GridOracleStateService } from './fortress-engine/fortress-oracle-state.service';
 import { FortressStateEngine } from './fortress-engine/fortress-state-engine';
+import { FortressLiabilityModule } from './fortress-engine/fortress-liability.module';
 
 @Module({
-  imports: [SocketModule, PriceModule],
+  imports: [SocketModule, PriceModule, FortressLiabilityModule],
   controllers: [GridController],
   providers: [GridService, GridOracleStateService, FortressStateEngine],
 })

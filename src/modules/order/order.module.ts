@@ -7,9 +7,15 @@ import { OrderWorker } from './order.worker';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { SocketModule } from '../socket/socket.module';
+import { FortressLiabilityModule } from '../grid/fortress-engine/fortress-liability.module';
 
 @Module({
-    imports: [forwardRef(() => AccountModule), TypeOrmModule.forFeature([Order]), forwardRef(() => SocketModule)],
+    imports: [
+        forwardRef(() => AccountModule),
+        TypeOrmModule.forFeature([Order]),
+        forwardRef(() => SocketModule),
+        FortressLiabilityModule,
+    ],
     controllers: [OrderController],
     providers: [OrderService, OrderWorker,
         {

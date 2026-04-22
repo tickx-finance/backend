@@ -12,6 +12,7 @@ import { PriceTick } from 'src/libs/price-tick';
 import { defaultMarketConfig, getSettledStartTs } from 'src/libs/market.config';
 import { BigNumber } from 'bignumber.js';
 import { env } from 'src/config';
+import { FortressLiabilityService } from '../grid/fortress-engine/fortress-liability.service';
 
 @Injectable()
 export class OrderService implements OnModuleInit {
@@ -30,6 +31,7 @@ export class OrderService implements OnModuleInit {
         private readonly accountService: AccountService,
         @Inject(EVENT_PUBLISHER)
         private readonly events: EventPublisher,
+        private readonly fortressLiabilityService: FortressLiabilityService,
     ) {
     }
 
@@ -43,6 +45,14 @@ export class OrderService implements OnModuleInit {
         this.logger.debug(`Loaded ${this.activeOrdersByBucket.size} active orders into memory`);
         console.log('----------Loaded', this.activeOrdersByBucket.size, 'active orders into memory');
         this.userCellIndex = this.buildUserCellIndex(activeOrders);
+        this.fortressLiabilityService.clear();
+        for (const order of activeOrders) {
+            this.fortressLiabilityService.recordOrderPlaced(
+                buildCellFromOrder(order),
+                order.amount,
+                order.rewardRate,
+            );
+        }
         this.logger.debug(`Loaded ${this.userCellIndex.size} user cells into memory`);
         console.log('----------Loaded', this.userCellIndex.size, 'user cells into memory');
     }
@@ -192,6 +202,11 @@ export class OrderService implements OnModuleInit {
             // 7. Save to DB
             const dbRecord = this.orderRepository.create(order);
             await this.orderRepository.save(dbRecord);
+            this.fortressLiabilityService.recordOrderPlaced(
+                dto.cell,
+                order.amount,
+                order.rewardRate,
+            );
             return order;
         } catch (error) {
             // Rollback optimistic updates on failure
@@ -267,6 +282,11 @@ export class OrderService implements OnModuleInit {
         order.settledWin = win;
 
         await this.orderRepository.save(order);
+        this.fortressLiabilityService.recordOrderSettled(
+            cell,
+            order.amount,
+            order.rewardRate,
+        );
     }
 
     async getOrderById(orderId: string): Promise<Order | null> {
