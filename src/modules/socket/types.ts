@@ -35,6 +35,7 @@ export enum EventName {
     WithdrawQueued = 'withdraw_queued',
     WithdrawCancelled = 'withdraw_cancelled',
     WithdrawSuccess = 'withdraw_success',
+    PriceNow = 'price_now',
 }
 
 export interface GridUpdateMessage {

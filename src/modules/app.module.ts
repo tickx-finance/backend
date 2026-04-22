@@ -11,6 +11,8 @@ import { AccountModule } from './account/account.module';
 import { AuthModule } from './auth/auth.module';
 import { OrderModule } from './order/order.module';
 import { PaymentModule } from './payment/payment.module';
+import { PriceModule } from './price/price.module';
+import { SocketModule } from './socket/socket.module';
 
 @Module({
     imports: [
@@ -26,7 +28,9 @@ import { PaymentModule } from './payment/payment.module';
         AccountModule,
         AuthModule,
         OrderModule,
-        PaymentModule
+        PaymentModule,
+        PriceModule,
+        SocketModule,
     ],
 })
 export class AppModule implements OnModuleInit {

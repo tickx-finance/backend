@@ -5,6 +5,7 @@ import { BalanceUpdateMessage, DepositSuccessMessage, EventName, getGridRoom, ge
 import { AccountEventPublisher } from '../account/account.events';
 import { OrderEventPublisher } from '../order/order.events';
 import { PaymentEventPublisher } from '../payment/payment.events';
+import { LatestPriceState } from 'src/libs/price-tick';
 
 @Injectable()
 @WebSocketGateway({
@@ -56,5 +57,11 @@ export class SocketService implements AccountEventPublisher, OrderEventPublisher
         this.server
             .to(getUserRoom(msg.userId))
             .emit(EventName.WithdrawSuccess, msg);
+    }
+
+    emitNewPrice(price: LatestPriceState) {
+        const msg = { price: price.price, ts: price.ts }
+        this.server
+            .emit(EventName.PriceNow, msg);
     }
 }
