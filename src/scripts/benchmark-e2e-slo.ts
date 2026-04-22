@@ -253,9 +253,109 @@ async function run() {
         await sleep(100);
     }
 
+    // --- Recovery Phase ---
+    console.log('\n--- Recovery Phase ---');
+    const RECOVERY_LATENCY_THRESHOLD = 100;
+    console.log(`Probe Threshold: ${RECOVERY_LATENCY_THRESHOLD}ms (Using P95 params as threshold)`);
+
+    // We need to keep some users connected or reconnect them? 
+    // The previous loop disconnected them? No, I see u.socket!.disconnect() at the very end (line 266).
+    // But wait, line 266 is inside the Analysis block which runs after completion.
+    // So users are still connected here.
+
+    const PROBE_BATCH_SIZE = 5;
+
+    const burstEndTime = Date.now();
+    let recoveryTimeMs = -1;
+    let attempts = 0;
+    const MAX_RECOVERY_ATTEMPTS = 50;
+
+    // Use first 5 users for probing
+    const probeUsers = users.slice(0, PROBE_BATCH_SIZE);
+    if (probeUsers.length < PROBE_BATCH_SIZE) {
+        console.warn("Not enough users for recovery probe batch of 5.");
+    }
+
+    // We need new cells for probing or reuse? Reuse might fail duplicate check.
+    // Let's find new valid cells for probing.
+    const probeCells = currentGrid
+        .filter(cell => cell.startTs > burstEndTime + defaultMarketConfig.gridXSize + 60000) // Far enough future
+        .sort((a, b) => a.startTs - b.startTs)
+        .slice(0, 100); // Pool of cells
+
+    if (probeCells.length === 0) {
+        console.error("No valid cells for recovery probing.");
+    } else {
+
+        while (attempts < MAX_RECOVERY_ATTEMPTS) {
+            attempts++;
+            await sleep(200); // Small wait between probes
+
+            const probeCell = probeCells[attempts % probeCells.length];
+            const probeDurations: number[] = [];
+            const probePromises = probeUsers.map(u => new Promise<void>((resolve) => {
+                const start = Date.now();
+                // Unique listener for this probe
+                const listener = (data: any) => {
+                    if (data.status === 'OPEN' && data.userId === u.address) {
+                        // Check matching cell?
+                        const cellId = getCellId(data.cell);
+                        if (cellId === getCellId(probeCell)) {
+                            probeDurations.push(Date.now() - start);
+                            u.socket!.off('order_update', listener);
+                            resolve();
+                        }
+                    }
+                };
+                u.socket!.on('order_update', listener);
+
+                // Send
+                const message = `${probeCell.gridTs}:${getCellId(probeCell)}:${amount}`;
+                const hmac = crypto.createHmac('sha256', Buffer.from(u.wssKey!, 'hex'));
+                hmac.update(message);
+                const signature = hmac.digest('hex');
+
+                const payload = {
+                    userId: u.address,
+                    marketId,
+                    amount,
+                    cell: probeCell,
+                    userSignature: signature
+                };
+                u.socket!.emit('place_bet', payload);
+
+                // Timeout for probe
+                setTimeout(() => {
+                    u.socket!.off('order_update', listener);
+                    resolve(); // Resolve anyway to unblock
+                }, 2000);
+            }));
+
+            await Promise.all(probePromises);
+
+            if (probeDurations.length > 0) {
+                const avgProbeLatency = probeDurations.reduce((a, b) => a + b, 0) / probeDurations.length;
+                console.log(`[Recovery Probe #${attempts}] Avg Latency: ${avgProbeLatency.toFixed(2)}ms`);
+
+                if (avgProbeLatency <= RECOVERY_LATENCY_THRESHOLD) {
+                    recoveryTimeMs = Date.now() - burstEndTime;
+                    console.log(`Latency recovered in ${recoveryTimeMs}ms`);
+                    break;
+                }
+            } else {
+                console.log(`[Recovery Probe #${attempts}] No successful probes.`);
+            }
+        }
+    }
+
+    // Disconnect
+    users.forEach(u => u.socket!.disconnect());
+
     console.log('\n\n--- Analysis ---');
 
-    // Collect all durations
+    // Collect all durations (re-verify logic since we might have polluted users.orders or just use u.orders which we didn't touch in probe)
+    // We didn't push probe orders to u.orders, so u.orders is clean for Burst stats.
+
     const allDurations: number[] = [];
     users.forEach(u => {
         u.orders.forEach(o => {
@@ -263,7 +363,6 @@ async function run() {
                 allDurations.push(o.duration);
             }
         });
-        u.socket!.disconnect();
     });
 
     if (allDurations.length === 0) {
@@ -291,6 +390,7 @@ async function run() {
     console.log(`Avg: ${avg.toFixed(2)}ms`);
     console.log(`P95: ${p95_val}ms (Threshold: ${P95_THRESHOLD}ms)`);
     console.log(`P99: ${p99_val}ms (Threshold: ${P99_THRESHOLD}ms)`);
+    console.log(`Recovery Time: ${recoveryTimeMs > 0 ? recoveryTimeMs + 'ms' : 'FAILED'}`);
 
     const p95_pass = p95_val <= P95_THRESHOLD;
     const p99_pass = p99_val <= P99_THRESHOLD;
@@ -313,10 +413,12 @@ async function run() {
 - **Avg**: ${avg.toFixed(2)}ms
 - **P95**: ${p95_val}ms
 - **P99**: ${p99_val}ms
+- **Recovery Time**: ${recoveryTimeMs > 0 ? recoveryTimeMs + 'ms' : 'FAILED (> ' + (MAX_RECOVERY_ATTEMPTS * 200) + 'ms approx)'}
 
 ## SLO Check
 - **P95 Compliance**: ${p95_pass ? 'PASS' : 'FAIL'}
 - **P99 Compliance**: ${p99_pass ? 'PASS' : 'FAIL'}
+- **Recovery**: ${recoveryTimeMs > 0 ? 'PASS' : 'FAIL'}
 `;
 
     const resultsDir = path.join(__dirname, '../../benchmark-results');
