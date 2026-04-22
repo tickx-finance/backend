@@ -129,8 +129,8 @@ Principal defaults:
 - `kappaQ = 0.5`
 - `kappaMin = 2.7`
 - `kappaMax = 6.0`
-- `mcNMin = 5000`
-- `mcNMax = 10000`
+- `mcNMin = 500`
+- `mcNMax = 1000`
 - `adaptiveMc = true`
 
 Mapping to existing `Cell`:
@@ -332,6 +332,7 @@ Phase 6 implementation note:
 
 - `computeBrownianBridgeHitProbability` ports the per-segment one-touch Brownian Bridge rules.
 - `computeFortressPWinMatrix` computes per-path/per-cell `P_win`, `P_raw`, and `pRawByCellId` from Fortress geometry and path matrices.
+- `computeFortressAdaptivePWinMatrix` now ports the Python adaptive MC loop: start with `mcNMin=500`, estimate per-cell absolute SE and relative error, and append another deterministic batch until thresholds pass or `mcNMax=1000` is reached.
 - Phase 6 remains isolated from socket broadcast; Phase 7 will consume `P_raw` to produce `M_final` quotes.
 
 ## Phase 7 - Quote Layer: P_raw To M_final
@@ -406,7 +407,7 @@ Runtime flow:
    - During warmup, only the final warmup tick sets `refreshBandWidth=true`; earlier warmup ticks keep the current dS and do not run `selectFinalFortressBandWidth`.
    - After warmup, only every `FORTRESS_BANDWIDTH_REFRESH_TICKS=3600` closed ticks runs `runPricing=true` with `refreshBandWidth=true` to refresh adaptive dS and quote surface.
    - All other closed ticks run `runPricing=false`, absorbing oracle price, volatility, jump detection, Hawkes intensity, and ATR without MC/quote work.
-5. When pricing runs, engine rebuilds cells, computes paths/BB `P_raw`, builds quotes, and maps betable quotes to signed legacy `Cell[]`.
+5. When pricing runs, engine rebuilds cells, computes adaptive MC paths/BB `P_raw`, builds quotes, and maps betable quotes to signed legacy `Cell[]`.
 6. Between pricing ticks, socket publishing reuses the last Fortress `Cell[]` surface.
 7. `eventPublisher.emitGridUpdate(cells)` publishes.
 

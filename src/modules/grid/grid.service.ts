@@ -8,10 +8,9 @@ import { GridOracleStateService } from './fortress-engine/fortress-oracle-state.
 import { FortressStateEngine } from './fortress-engine/fortress-state-engine';
 import { FortressPricingCadence } from './fortress-engine/fortress-pricing-cadence';
 import { FORTRESS_GLOBAL_CONFIG, FORTRESS_MAIN_MODE } from './fortress-engine/fortress.config';
-import { generateFortressSeedParts, simulateFortressPaths } from './fortress-engine/fortress-path-simulator';
-import { computeFortressPWinMatrix } from './fortress-engine/fortress-brownian-bridge';
 import { buildFortressQuotes } from './fortress-engine/fortress-quote-builder';
 import { mapFortressQuotesToCells } from './fortress-engine/fortress-cell.mapper';
+import { computeFortressAdaptivePWinMatrix } from './fortress-engine/fortress-adaptive-mc';
 
 const TIME_CELL = 5.0 * 1000;
 const PRICE_CELL = 25.0;
@@ -188,30 +187,14 @@ export class GridService implements OnModuleInit {
 
     const horizon = Math.max(...FORTRESS_MAIN_MODE.windows.map(([, endSecond]) => endSecond))
       + Math.max(0, FORTRESS_GLOBAL_CONFIG.lockOffset);
-    const paths = simulateFortressPaths({
+    const pwin = computeFortressAdaptivePWinMatrix({
       price,
-      pathCount: FORTRESS_MAIN_MODE.mcNMin,
       horizon,
-      sigma: transition.modeState.sigma,
-      lambdaIntensity: transition.modeState.lambdaIntensity,
-      jumpSampler: transition.modeState.jumpSampler,
-      seedParts: generateFortressSeedParts(
-        FORTRESS_GLOBAL_CONFIG.seed,
-        FORTRESS_MAIN_MODE.modeId,
-        oracleSecond,
-        price,
-      ),
-      mu: FORTRESS_GLOBAL_CONFIG.mu,
-      useAntithetic: FORTRESS_GLOBAL_CONFIG.useAntithetic,
-      epsilon: FORTRESS_GLOBAL_CONFIG.epsilon,
-    }).paths;
-    const pwin = computeFortressPWinMatrix({
       geometry: transition.geometry,
-      paths,
-      sigma: transition.modeState.sigma,
-      lockOffset: FORTRESS_GLOBAL_CONFIG.lockOffset,
-      epsilon: FORTRESS_GLOBAL_CONFIG.epsilon,
-      varianceFloor: FORTRESS_GLOBAL_CONFIG.varianceFloor,
+      mode: FORTRESS_MAIN_MODE,
+      config: FORTRESS_GLOBAL_CONFIG,
+      modeState: transition.modeState,
+      oracleSecond,
     });
     const { quotes } = buildFortressQuotes({
       geometry: transition.geometry,
