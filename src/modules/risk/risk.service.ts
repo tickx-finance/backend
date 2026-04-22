@@ -64,13 +64,13 @@ export class RiskService {
     }
 
     // Sum all user balances
-    let totalLiability = BigInt(0);
+    let totalLiability = 0;
 
     for (const snapshot of latestSnapshots) {
       if (snapshot.balanceAfter) {
         // Sum free + locked (exclude freeTap as it's separate)
-        const free = BigInt(snapshot.balanceAfter.free || '0');
-        const locked = BigInt(snapshot.balanceAfter.locked || '0');
+        const free = Number(snapshot.balanceAfter.free || '0');
+        const locked = Number(snapshot.balanceAfter.locked || '0');
         const userTotal = free + locked;
         totalLiability += userTotal;
 
@@ -82,6 +82,6 @@ export class RiskService {
 
     this.logger.log(`Total liability calculated: ${totalLiability.toString()}`);
 
-    return totalLiability;
+    return BigInt(Math.floor(totalLiability));
   }
 }
