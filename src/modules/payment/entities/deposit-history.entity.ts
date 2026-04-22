@@ -9,7 +9,7 @@ export class DepositHistory {
     @Column()
     userId: string;
 
-    @Column('decimal', { precision: 20, scale: 0 })
+    @Column('decimal', { precision: 30, scale: 9 })
     amount: string;
 
     @Column()
@@ -17,6 +17,18 @@ export class DepositHistory {
 
     @Column('int')
     logIndex: number;
+
+    @Column({ type: 'bigint', nullable: true })
+    blockNumber?: string | null;
+
+    @Column({ nullable: true })
+    blockHash?: string | null;
+
+    @Column({ nullable: true })
+    contractAddress?: string | null;
+
+    @Column({ nullable: true })
+    chainId?: string | null;
 
     @CreateDateColumn()
     createdAt: Date;

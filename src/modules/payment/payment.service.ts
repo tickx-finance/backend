@@ -4,11 +4,11 @@ import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
 import { DepositHistory } from './entities/deposit-history.entity';
 import { WithdrawalSession, WithdrawalStatus } from './entities/withdrawal-session.entity';
-import { MockOnChainService } from './mock-on-chain.service';
 import { PaymentErrorCode } from './types';
 import { WithdrawalHistory } from './entities/withdrawal-history.entity';
 import { uuidv7 } from 'uuidv7';
 import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
+import { WithdrawalClaimSigner } from './withdrawal-claim-signer.service';
 
 @Injectable()
 export class PaymentService {
@@ -16,7 +16,7 @@ export class PaymentService {
 
     constructor(
         private readonly accountService: AccountService,
-        private readonly mockOnChain: MockOnChainService,
+        private readonly withdrawalClaimSigner: WithdrawalClaimSigner,
         @InjectRepository(DepositHistory)
         private readonly depositRepo: Repository<DepositHistory>,
         @InjectRepository(WithdrawalHistory)
@@ -82,6 +82,11 @@ export class PaymentService {
                     sessionId: existingSession.sessionId,
                     amount: existingSession.amount,
                     approvalSignature: existingSession.approvalSignature,
+                    deadline: existingSession.deadline ? Number(existingSession.deadline) : null,
+                    nonce: existingSession.nonce,
+                    reservePoolAddress: existingSession.reservePoolAddress,
+                    quoteAssetAddress: existingSession.quoteAssetAddress,
+                    method: 'withdrawTrader',
                     expiresAt: existingSession.expiresAt,
                     isExisting: true
                 };
@@ -89,13 +94,19 @@ export class PaymentService {
         }
 
         const sessionId = uuidv7();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        const deadline = Math.floor(expiresAt.getTime() / 1000);
 
         // 2. Lock funds via Account Service
         // If this fails (insufficient funds), it throws
         await this.accountService.withdrawRequested(userId, amount, sessionId);
 
-        // 3. Generate Approval
-        const approvalSignature = await this.mockOnChain.signWithdrawalApproval(sessionId, userId, amount);
+        // 3. Generate on-chain withdrawal approval
+        const claim = await this.withdrawalClaimSigner.signWithdrawalClaim({
+            trader: userId,
+            amount,
+            deadline,
+        });
 
         // 4. Save Session
         const session = this.withdrawalSessionRepo.create({
@@ -103,8 +114,12 @@ export class PaymentService {
             userId,
             amount,
             status: WithdrawalStatus.OPEN,
-            approvalSignature,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 min expiry
+            approvalSignature: claim.signature,
+            deadline: String(deadline),
+            nonce: claim.nonce,
+            reservePoolAddress: claim.reservePoolAddress,
+            quoteAssetAddress: claim.quoteAssetAddress,
+            expiresAt,
         });
 
         await this.withdrawalSessionRepo.save(session);
@@ -119,7 +134,12 @@ export class PaymentService {
         return {
             sessionId,
             amount,
-            approvalSignature,
+            approvalSignature: claim.signature,
+            deadline,
+            nonce: claim.nonce,
+            reservePoolAddress: claim.reservePoolAddress,
+            quoteAssetAddress: claim.quoteAssetAddress,
+            method: 'withdrawTrader',
             expiresAt: session.expiresAt,
             isExisting: false
         };
@@ -244,4 +264,3 @@ export class PaymentService {
         });
     }
 }
-

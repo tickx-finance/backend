@@ -31,6 +31,18 @@ export class WithdrawalSession {
     @Column({ type: 'text', nullable: true })
     approvalSignature: string | null;
 
+    @Column({ type: 'bigint', nullable: true })
+    deadline: string | null;
+
+    @Column({ type: 'bigint', nullable: true })
+    nonce: string | null;
+
+    @Column({ type: 'text', nullable: true })
+    reservePoolAddress: string | null;
+
+    @Column({ type: 'text', nullable: true })
+    quoteAssetAddress: string | null;
+
     @CreateDateColumn()
     createdAt: Date;
 

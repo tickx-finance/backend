@@ -31,6 +31,18 @@ const envVarsSchema = Joi.object()
     MINIO_SECRET_KEY: Joi.string().required(),
 
     RPC: Joi.string().required(),
+    RPCS: Joi.string().default(''),
+    QUOTE_ASSET_ADDRESS: Joi.string().default(''),
+    RESERVE_POOL_ADDRESS: Joi.string().default(''),
+    CLAIM_SIGNER_PRIVATE_KEY: Joi.string().default(''),
+    PAYMENT_CHAIN_SYNC_ENABLED: Joi.boolean().default(false),
+    PAYMENT_CHAIN_SYNC_START_BLOCK: Joi.number().integer().min(0).default(0),
+    PAYMENT_CHAIN_SYNC_CONFIRMATIONS: Joi.number().integer().min(0).default(3),
+    PAYMENT_CHAIN_SYNC_CHUNK_SIZE: Joi.number().integer().min(1).default(2000),
+    PAYMENT_CHAIN_SYNC_POLL_MS: Joi.number().integer().min(1000).default(10000),
+    PAYMENT_WITHDRAWAL_EXPIRY_ENABLED: Joi.boolean().default(true),
+    PAYMENT_WITHDRAWAL_EXPIRY_POLL_MS: Joi.number().integer().min(1000).default(30000),
+    PAYMENT_WITHDRAWAL_EXPIRY_BATCH_SIZE: Joi.number().integer().min(1).default(100),
 
     KAFKA_BROKER: Joi.string().default('localhost:39092'),
     KAFKA_TOPIC_PREFIX: Joi.string().required(),
@@ -87,6 +99,27 @@ export const env = {
   },
   web3: {
     rpc: envVars.RPC,
+    rpcs: (envVars.RPCS || envVars.RPC)
+      .split(',')
+      .map((rpc: string) => rpc.trim())
+      .filter(Boolean),
+  },
+  payment: {
+    quoteAssetAddress: envVars.QUOTE_ASSET_ADDRESS,
+    reservePoolAddress: envVars.RESERVE_POOL_ADDRESS,
+    claimSignerPrivateKey: envVars.CLAIM_SIGNER_PRIVATE_KEY,
+    chainSyncEnabled:
+      envVars.PAYMENT_CHAIN_SYNC_ENABLED === true ||
+      envVars.PAYMENT_CHAIN_SYNC_ENABLED === 'true',
+    chainSyncStartBlock: envVars.PAYMENT_CHAIN_SYNC_START_BLOCK,
+    chainSyncConfirmations: envVars.PAYMENT_CHAIN_SYNC_CONFIRMATIONS,
+    chainSyncChunkSize: envVars.PAYMENT_CHAIN_SYNC_CHUNK_SIZE,
+    chainSyncPollMs: envVars.PAYMENT_CHAIN_SYNC_POLL_MS,
+    withdrawalExpiryEnabled:
+      envVars.PAYMENT_WITHDRAWAL_EXPIRY_ENABLED === true ||
+      envVars.PAYMENT_WITHDRAWAL_EXPIRY_ENABLED === 'true',
+    withdrawalExpiryPollMs: envVars.PAYMENT_WITHDRAWAL_EXPIRY_POLL_MS,
+    withdrawalExpiryBatchSize: envVars.PAYMENT_WITHDRAWAL_EXPIRY_BATCH_SIZE,
   },
   kafka: {
     broker: envVars.KAFKA_BROKER,
