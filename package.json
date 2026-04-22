@@ -22,7 +22,8 @@
     "migration:down": "npm run typeorm:cli -- -d src/libs/typeorm.config.ts migration:revert",
     "migration:clickhouse": "npx ts-node -r tsconfig-paths/register src/libs/click-house/clickhouse.migrator.ts",
     "typechain:gen": "typechain --target ethers-v6 --out-dir src/contracts src/abis/**/*.json",
-    "mock:settlement": "ts-node -r tsconfig-paths/register src/scripts/insert-mock-settlement-data.ts"
+    "mock:settlement": "ts-node -r tsconfig-paths/register src/scripts/insert-mock-settlement-data.ts",
+    "mock:balance": "ts-node -r tsconfig-paths/register src/scripts/insert-mock-balance-data.ts"
   },
   "dependencies": {
     "@clickhouse/client": "^1.11.2",

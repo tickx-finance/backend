@@ -15,6 +15,7 @@ import { PriceModule } from './price/price.module';
 import { SocketModule } from './socket/socket.module';
 import { GridModule } from './grid/grid.module';
 import { SettlementModule } from './settlement/settlement.module';
+import { RiskModule } from './risk/risk.module';
 
 @Module({
     imports: [
@@ -35,6 +36,7 @@ import { SettlementModule } from './settlement/settlement.module';
         PriceModule,
         GridModule,
         SettlementModule,
+        RiskModule,
     ],
 })
 export class AppModule implements OnModuleInit {
