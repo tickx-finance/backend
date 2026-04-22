@@ -149,6 +149,7 @@ export class OrderService implements OnModuleInit {
         const wsMsg: OrderUpdateMessage = {
             orderId,
             userId,
+            amount: dto.amount,
             marketId: dto.marketId,
             cell: dto.cell,
             status: OrderStatus.OPEN,
@@ -237,6 +238,7 @@ export class OrderService implements OnModuleInit {
             marketId: order.marketId,
             cell,
             status: OrderStatus.SETTLED,
+            amount: order.amount,
             settledWin: win,
             settledTimestamp: settledTs,
         }

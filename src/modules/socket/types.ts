@@ -50,6 +50,7 @@ export interface OrderUpdateMessage {
     orderId: string;
     userId: string;
     marketId: string;
+    amount: string;
     cell: any;
 
     status: OrderStatus;
