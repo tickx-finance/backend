@@ -2,7 +2,6 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Unique
 
 export enum PaymentChainEventName {
     TRADER_DEPOSITED = 'TraderDeposited',
-    TRADER_WITHDRAWN = 'TraderWithdrawn',
     TRADER_CLAIMED = 'TraderClaimed',
 }
 

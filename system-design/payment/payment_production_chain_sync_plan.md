@@ -26,7 +26,6 @@ Relevant contract surface:
 
 - Events:
   - `TraderDeposited(trader indexed, amount)`
-  - `TraderWithdrawn(trader indexed, amount)`
   - `TraderClaimed(trader indexed, amount)`
   - `ClaimSignerUpdated(previousSigner indexed, newSigner indexed)`
 - Read functions:
@@ -93,8 +92,7 @@ Tasks:
   - Retries across `RPCS`.
 - Decode and route:
   - `TraderDeposited` -> deposit pipeline.
-  - `TraderWithdrawn` -> withdrawal success pipeline.
-  - `TraderClaimed` -> claim/deposit-like pipeline if product uses claim as balance credit; otherwise store audit-only.
+  - `TraderClaimed` -> withdrawal success pipeline.
 - Persist raw event metadata:
   - `txHash`
   - `logIndex`
@@ -113,7 +111,7 @@ Exit criteria:
 Implementation note:
 
 - Added `payment_chain_cursors` and `payment_chain_events` entities plus migration.
-- `PaymentChainClient` can now read latest block, fetch logs for `TraderDeposited`, `TraderWithdrawn`, and `TraderClaimed`, and decode them into normalized event records.
+- `PaymentChainClient` can now read latest block, fetch logs for `TraderDeposited` and `TraderClaimed`, and decode them into normalized event records.
 - `PaymentChainSyncWorker.syncOnce()` reads from cursor, applies confirmation depth and chunk size, persists raw events idempotently by `(txHash, logIndex)`, and advances cursor only after each chunk is saved.
 - Polling is gated by `PAYMENT_CHAIN_SYNC_ENABLED`; default is disabled until rollout.
 
@@ -134,7 +132,7 @@ Tasks:
 - Deposit mapping:
   - `TraderDeposited(trader, amount)` calls `AccountService.deposit(trader, amount, txHash, logIndex)`.
 - Withdrawal mapping:
-  - `TraderWithdrawn(trader, amount)` finds matching OPEN session by `userId + amount`.
+  - `TraderClaimed(trader, amount)` finds matching OPEN session by `userId + amount`.
   - Calls `AccountService.withdrawSucceeded(userId, amount, txHash, logIndex)`.
   - Marks session `SUCCESS`.
 - If no matching session exists:
@@ -151,9 +149,8 @@ Exit criteria:
 Implementation note:
 
 - `PaymentChainEventProcessor` maps `TraderDeposited` to `AccountService.deposit` and writes `deposit_history` with chain metadata.
-- `TraderWithdrawn` matches the oldest OPEN withdrawal session for the trader by BigNumber amount, calls `AccountService.withdrawSucceeded`, closes the session, writes `withdrawal_history`, and emits withdraw success.
-- Unmatched `TraderWithdrawn` events are marked `AUDIT_ONLY` with an error reason and do not mutate account balances.
-- `TraderClaimed` is currently `AUDIT_ONLY` until product claim accounting is explicitly enabled.
+- `TraderClaimed` matches the oldest OPEN withdrawal session for the trader by BigNumber amount, calls `AccountService.withdrawSucceeded`, closes the session, writes `withdrawal_history`, and emits withdraw success.
+- Unmatched `TraderClaimed` events are marked `AUDIT_ONLY` with an error reason and do not mutate account balances.
 - `PaymentChainSyncWorker` now processes pending raw events after each persisted log chunk and also when no new blocks are available.
 
 ## Phase 4 - Production Withdrawal Session API
@@ -183,7 +180,7 @@ Tasks:
   - `deadline`
   - `signature`
   - `nonce`
-- Session closes only when the worker observes `TraderWithdrawn`.
+- Session closes only when the worker observes `TraderClaimed`.
 - Expiry unlocks funds if no chain withdrawal event was observed.
 
 Exit criteria:
@@ -197,7 +194,7 @@ Implementation note:
 - `PaymentService.requestWithdrawal` now uses `WithdrawalClaimSigner` instead of `MockOnChainService`.
 - New sessions lock funds, compute a 15-minute deadline, sign `getClaimDigest`, persist `approvalSignature`, `deadline`, `nonce`, `reservePoolAddress`, and `quoteAssetAddress`, and return tx-ready `{ method: 'withdrawTrader', amount, deadline, signature }` metadata.
 - Existing OPEN sessions return their stored signature metadata instead of creating a new signature or relocking funds.
-- Session success still comes from the chain event processor observing `TraderWithdrawn`; debug finalize remains only until Phase 5 removes debug APIs.
+- Session success still comes from the chain event processor observing `TraderClaimed`; debug finalize remains only until Phase 5 removes debug APIs.
 
 ## Phase 5 - Debug Removal, Backfill, And Rollout
 
@@ -278,7 +275,7 @@ Implementation note:
 
 ### Handle Unmatched Withdrawals
 
-1. Query `payment_chain_events` where `eventName='TraderWithdrawn'` and `ledgerStatus='AUDIT_ONLY'`.
+1. Query `payment_chain_events` where `eventName='TraderClaimed'` and `ledgerStatus='AUDIT_ONLY'`.
 2. Inspect `ledgerError`.
 3. Reconcile manually before changing the event back to `PENDING`.
 

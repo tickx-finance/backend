@@ -84,10 +84,8 @@ export class PaymentChainEventProcessor {
             case PaymentChainEventName.TRADER_DEPOSITED:
                 await this.applyDeposit(event);
                 return this.markApplied(event);
-            case PaymentChainEventName.TRADER_WITHDRAWN:
-                return this.applyWithdrawal(event);
             case PaymentChainEventName.TRADER_CLAIMED:
-                return this.markAuditOnly(event, 'TraderClaimed is audit-only until product claim accounting is enabled');
+                return this.applyWithdrawal(event);
             default:
                 return this.markAuditOnly(event, `Unsupported event ${event.eventName}`);
         }

@@ -150,7 +150,6 @@ export class PaymentChainClient implements OnModuleInit {
     private paymentEventTopics(): string[] {
         return [
             PaymentChainEventName.TRADER_DEPOSITED,
-            PaymentChainEventName.TRADER_WITHDRAWN,
             PaymentChainEventName.TRADER_CLAIMED,
         ].map((eventName) => {
             const event = this.iface.getEvent(eventName);

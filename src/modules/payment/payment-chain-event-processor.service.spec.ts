@@ -25,7 +25,7 @@ describe('PaymentChainEventProcessor', () => {
         expect(event.appliedToLedger).toBe(true);
     });
 
-    it('matches TraderWithdrawn events to an open withdrawal session', async () => {
+    it('matches TraderClaimed events to an open withdrawal session', async () => {
         const harness = makeHarness({
             withdrawalSessions: [{
                 sessionId: 'session-1',
@@ -38,7 +38,7 @@ describe('PaymentChainEventProcessor', () => {
                 expiresAt: new Date('2026-01-01T00:15:00Z'),
             }],
         });
-        const event = makeEvent(PaymentChainEventName.TRADER_WITHDRAWN, {
+        const event = makeEvent(PaymentChainEventName.TRADER_CLAIMED, {
             amount: '100',
         });
 
@@ -58,9 +58,9 @@ describe('PaymentChainEventProcessor', () => {
         expect(harness.withdrawalHistoryRepo.save).toHaveBeenCalled();
     });
 
-    it('marks unmatched TraderWithdrawn events as audit-only', async () => {
+    it('marks unmatched TraderClaimed events as audit-only', async () => {
         const harness = makeHarness();
-        const event = makeEvent(PaymentChainEventName.TRADER_WITHDRAWN);
+        const event = makeEvent(PaymentChainEventName.TRADER_CLAIMED);
 
         const status = await harness.processor.processOne(event);
 
