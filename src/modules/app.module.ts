@@ -18,6 +18,7 @@ import { SettlementModule } from './settlement/settlement.module';
 import { RiskModule } from './risk/risk.module';
 import { DistributionModule } from './distribution/distribution.module';
 import { StrategyModule } from './strategy/strategy.module';
+import { WorkerModule } from './worker/worker.module';
 
 @Module({
     imports: [
@@ -41,6 +42,7 @@ import { StrategyModule } from './strategy/strategy.module';
         RiskModule,
         DistributionModule,
         StrategyModule,
+        WorkerModule,
     ],
 })
 export class AppModule implements OnModuleInit {
