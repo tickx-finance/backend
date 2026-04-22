@@ -108,64 +108,88 @@ export class DistributionController {
       this.logger.debug('Fetching LP distribution pending batches');
 
       const randomReceiver = () => ethers.Wallet.createRandom().address;
+      const weiMultiplier = 10n ** 18n;
+      const toWeiString = (wholeTokens: bigint) => (wholeTokens * weiMultiplier).toString();
+      const randomWholeTokens = (min: number, max: number): bigint =>
+        BigInt(Math.floor(Math.random() * (max - min + 1)) + min);
+      const randomSplit = (total: bigint, parts: number): bigint[] => {
+        let remaining = Number(total);
+        const split: bigint[] = [];
+
+        for (let index = 0; index < parts - 1; index++) {
+          const minRemaining = parts - index - 1;
+          const currentPart = Math.floor(Math.random() * (remaining - minRemaining)) + 1;
+          split.push(BigInt(currentPart));
+          remaining -= currentPart;
+        }
+
+        split.push(BigInt(remaining));
+        return split;
+      };
+
+      const batch1TotalRewardsTokens = randomWholeTokens(9000, 14000);
+      const batch2TotalRewardsTokens = randomWholeTokens(6000, 10000);
+      const batch1LpShares = randomSplit(randomWholeTokens(9000, 14000), 4);
+      const batch2LpShares = randomSplit(randomWholeTokens(6000, 10000), 2);
+      const batch1DestinationAmounts = randomSplit(batch1TotalRewardsTokens, 2);
 
       // Mocked response as per spec
       const response: DistributionBatchesResponse = {
         batches: [
           {
             epochId: Date.now(),
-            totalRewards: '10000000000000000000000', // 10,000 tokens
+            totalRewards: toWeiString(batch1TotalRewardsTokens),
             snapshotBlock: 12345678,
             lpShares: [
               {
                 lp: '0x1111111111111111111111111111111111111111',
-                shares: '3000000000000000000000', // 3,000 shares
+                shares: toWeiString(batch1LpShares[0]),
               },
               {
                 lp: '0x2222222222222222222222222222222222222222',
-                shares: '2500000000000000000000', // 2,500 shares
+                shares: toWeiString(batch1LpShares[1]),
               },
               {
                 lp: '0x3333333333333333333333333333333333333333',
-                shares: '2500000000000000000000', // 2,500 shares
+                shares: toWeiString(batch1LpShares[2]),
               },
               {
                 lp: '0x4444444444444444444444444444444444444444',
-                shares: '2000000000000000000000', // 2,000 shares
+                shares: toWeiString(batch1LpShares[3]),
               },
             ],
             destinations: [
               {
                 chainSelector: 16015286601757825753, // Ethereum mainnet
                 receiver: randomReceiver(),
-                amount: '6000000000000000000000', // 6,000 tokens
+                amount: toWeiString(batch1DestinationAmounts[0]),
               },
               {
                 chainSelector: 14767482510784806043, // Polygon
                 receiver: randomReceiver(),
-                amount: '4000000000000000000000', // 4,000 tokens
+                amount: toWeiString(batch1DestinationAmounts[1]),
               },
             ],
           },
           {
             epochId: Date.now() + 1,
-            totalRewards: '8000000000000000000000', // 8,000 tokens
+            totalRewards: toWeiString(batch2TotalRewardsTokens),
             snapshotBlock: 12345800,
             lpShares: [
               {
                 lp: '0x5555555555555555555555555555555555555555',
-                shares: '4000000000000000000000', // 4,000 shares
+                shares: toWeiString(batch2LpShares[0]),
               },
               {
                 lp: '0x6666666666666666666666666666666666666666',
-                shares: '4000000000000000000000', // 4,000 shares
+                shares: toWeiString(batch2LpShares[1]),
               },
             ],
             destinations: [
               {
                 chainSelector: 16015286601757825753,
                 receiver: randomReceiver(),
-                amount: '8000000000000000000000',
+                amount: toWeiString(batch2TotalRewardsTokens),
               },
             ],
           },
