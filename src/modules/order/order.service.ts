@@ -155,20 +155,6 @@ export class OrderService implements OnModuleInit {
         }
         await this.events.emitOrderUpdate(wsMsg)
 
-        const order: Order = {
-            orderId,
-            userId,
-            marketId: dto.marketId,
-            cellTimeStart: dto.cell.startTs,
-            cellTimeEnd: dto.cell.endTs,
-            lowerPrice: dto.cell.lowerPrice,
-            upperPrice: dto.cell.upperPrice,
-            amount: dto.amount,
-            rewardRate: dto.cell.rewardRate,
-            placedAt: Date.now(),
-            status: OrderStatus.OPEN,
-        };
-
         // 5. Update In-mem Active Orders (Optimistic Lock)
         // Crucial: Must update BEFORE placeBet to prevent double-spending in race conditions
         if (!this.userCellIndex.has(userId)) {
@@ -176,19 +162,30 @@ export class OrderService implements OnModuleInit {
         }
         this.userCellIndex.get(userId).set(cellId, true);
 
-        // Bucket storage
-        let bucket = this.activeOrdersByBucket.get(dto.cell.startTs);
-        if (!bucket) {
-            bucket = new Map();
-            this.activeOrdersByBucket.set(dto.cell.startTs, bucket);
-        }
-        bucket.set(orderId, order);
-
         // 3. Call Account Service
         // This will throw if insufficient balance
         try {
             await this.accountService.placeBet(userId, dto.amount, dto.marketId, cellId);
-
+            // Bucket storage
+            let bucket = this.activeOrdersByBucket.get(dto.cell.startTs);
+            if (!bucket) {
+                bucket = new Map();
+                this.activeOrdersByBucket.set(dto.cell.startTs, bucket);
+            }
+            const order: Order = {
+                orderId,
+                userId,
+                marketId: dto.marketId,
+                cellTimeStart: dto.cell.startTs,
+                cellTimeEnd: dto.cell.endTs,
+                lowerPrice: dto.cell.lowerPrice,
+                upperPrice: dto.cell.upperPrice,
+                amount: dto.amount,
+                rewardRate: dto.cell.rewardRate,
+                placedAt: Date.now(),
+                status: OrderStatus.OPEN,
+            };
+            bucket.set(orderId, order);
             this.logger.log(`Order placed: ${orderId}`);
 
             // 7. Save to DB
@@ -198,7 +195,6 @@ export class OrderService implements OnModuleInit {
         } catch (error) {
             // Rollback optimistic updates on failure
             this.userCellIndex.get(userId)?.delete(cellId);
-            bucket.delete(orderId);
 
             // Emit rejection event
             const rejectMsg: OrderUpdateMessage = {
