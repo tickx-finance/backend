@@ -67,6 +67,7 @@ describe('FortressStateEngine', () => {
         });
 
         expect(transition.runPricing).toBe(false);
+        expect(transition.refreshBandWidth).toBe(false);
         expect(transition.bandWidthDecision).toBeNull();
         expect(transition.geometry).toBeNull();
         expect(engine.getGeometry()).toBeNull();
@@ -76,6 +77,20 @@ describe('FortressStateEngine', () => {
         });
         expect(transition.modeState.sigma).toBeGreaterThan(0);
         expect(transition.modeState.lambdaIntensity).toBeGreaterThan(0);
+        expect(transition.modeState.bandWidthCurrent).toBe(FORTRESS_MAIN_MODE.bandWidth);
+    });
+
+    it('can run pricing without refreshing adaptive dS', () => {
+        const engine = new FortressStateEngine(mainModeForTest());
+        const transition = engine.updateOracle(buildUpdates([100000, 100500])[1], {
+            runPricing: true,
+            refreshBandWidth: false,
+        });
+
+        expect(transition.runPricing).toBe(true);
+        expect(transition.refreshBandWidth).toBe(false);
+        expect(transition.bandWidthDecision).toBeNull();
+        expect(transition.geometry?.bandWidth).toBe(FORTRESS_MAIN_MODE.bandWidth);
         expect(transition.modeState.bandWidthCurrent).toBe(FORTRESS_MAIN_MODE.bandWidth);
     });
 

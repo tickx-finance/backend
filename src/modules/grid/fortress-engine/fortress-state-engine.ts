@@ -41,6 +41,7 @@ export class FortressStateEngine {
         options: FortressOracleUpdateOptions = {},
     ): FortressStateTransition {
         const runPricing = options.runPricing ?? true;
+        const refreshBandWidth = options.refreshBandWidth ?? runPricing;
         const state = cloneModeState(this.modeState);
         const trueRange = computeTrueRange(
             update.bar.high,
@@ -104,7 +105,7 @@ export class FortressStateEngine {
         state.sigmaRaw = sigmaRaw;
         state.jumpFlag = jumpFlag;
         state.lambdaIntensity = Math.max(0, lambdaNext);
-        const bandWidthDecision = runPricing
+        const bandWidthDecision = runPricing && refreshBandWidth
             ? selectFinalFortressBandWidth({
                 mode: this.mode,
                 config: this.config,
@@ -142,6 +143,7 @@ export class FortressStateEngine {
             geometry: this.geometry ? cloneGeometry(this.geometry) : null,
             bandWidthDecision,
             runPricing,
+            refreshBandWidth,
             logReturn: update.logReturn,
             vObserved,
             vPrevious,

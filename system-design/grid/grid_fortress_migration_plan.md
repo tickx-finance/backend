@@ -371,6 +371,7 @@ Phase 7 implementation note:
 - `computeFortressEffectiveMargin` ports `mEff = mBase + clamp(aSigma*sigmaTerm + aLambda*lambdaTerm, 0, mRiskMax)`.
 - The existing mapper converts betable quotes into the legacy signed `Cell[]` socket shape.
 - Liability skew is supported as an optional map, but defaults to neutral empty-liability behavior for rollout.
+- `M_final` now includes the Python idle center penalty: when `atr_mean <= band_width`, center-row multipliers are compressed by window-interpolated divisors `1.5 -> 1.2`, adjacent rows by `1.3 -> 1.1`.
 
 Adaptive dS implementation note:
 
@@ -398,14 +399,21 @@ Suggested structure:
 Runtime flow:
 
 1. Price Module emits/records 1s OHLCV close.
-2. Grid service updates Fortress state once per oracle second.
-3. Engine rebuilds cells and computes quotes.
-4. Mapper converts betable quotes to signed `Cell[]`.
-5. `eventPublisher.emitGridUpdate(cells)` publishes.
+2. Grid service updates Fortress state once per closed oracle second.
+3. Pricing cadence:
+   - First `FORTRESS_BANDWIDTH_WARMUP_TICKS=100` closed ticks run `runPricing=true` so the engine can publish a warmup quote surface.
+   - During warmup, only the final warmup tick sets `refreshBandWidth=true`; earlier warmup ticks keep the current dS and do not run `selectFinalFortressBandWidth`.
+   - After warmup, only every `FORTRESS_BANDWIDTH_REFRESH_TICKS=3600` closed ticks runs `runPricing=true` with `refreshBandWidth=true` to refresh adaptive dS and quote surface.
+   - All other closed ticks run `runPricing=false`, absorbing oracle price, volatility, jump detection, Hawkes intensity, and ATR without MC/quote work.
+4. When pricing runs, engine rebuilds cells, computes paths/BB `P_raw`, builds quotes, and maps betable quotes to signed legacy `Cell[]`.
+5. Between pricing ticks, socket publishing reuses the last Fortress `Cell[]` surface.
+6. `eventPublisher.emitGridUpdate(cells)` publishes.
 
 Feature flags:
 
 - `GRID_ENGINE=legacy|fortress`
+- `FORTRESS_BANDWIDTH_WARMUP_TICKS=100`
+- `FORTRESS_BANDWIDTH_REFRESH_TICKS=3600`
 - `FORTRESS_MC_N_MIN`
 - `FORTRESS_MC_N_MAX`
 - `FORTRESS_EMIT_FULL_DEBUG=false`

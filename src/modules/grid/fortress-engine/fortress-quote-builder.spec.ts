@@ -7,6 +7,7 @@ import {
 } from './fortress.config';
 import { buildFortressGridGeometry } from './fortress-grid-geometry';
 import {
+    applyIdleCenterPenalty,
     buildFortressQuotes,
     computeFortressEffectiveMargin,
     computeLiabilitySkew,
@@ -130,5 +131,73 @@ describe('Fortress quote builder', () => {
             'startTs',
             'upperPrice',
         ]);
+    });
+
+    it('applies idle center penalty when ATR mean is not above band width', () => {
+        expect(applyIdleCenterPenalty(
+            FORTRESS_MAIN_MODE,
+            { atrMean: 5 },
+            { row: FORTRESS_MAIN_MODE.centerRow, windowIndex: 0 },
+            3,
+            5,
+        )).toBeCloseTo(2, 15);
+        expect(applyIdleCenterPenalty(
+            FORTRESS_MAIN_MODE,
+            { atrMean: 5 },
+            { row: FORTRESS_MAIN_MODE.centerRow, windowIndex: 11 },
+            3,
+            5,
+        )).toBeCloseTo(2.5, 15);
+        expect(applyIdleCenterPenalty(
+            FORTRESS_MAIN_MODE,
+            { atrMean: 5 },
+            { row: FORTRESS_MAIN_MODE.centerRow + 1, windowIndex: 0 },
+            3,
+            5,
+        )).toBeCloseTo(3 / 1.3, 15);
+        expect(applyIdleCenterPenalty(
+            FORTRESS_MAIN_MODE,
+            { atrMean: 5 },
+            { row: FORTRESS_MAIN_MODE.centerRow + 2, windowIndex: 0 },
+            3,
+            5,
+        )).toBe(3);
+        expect(applyIdleCenterPenalty(
+            FORTRESS_MAIN_MODE,
+            { atrMean: 6 },
+            { row: FORTRESS_MAIN_MODE.centerRow, windowIndex: 0 },
+            3,
+            5,
+        )).toBe(3);
+    });
+
+    it('uses idle center penalty in final quote multipliers', () => {
+        const geometry = buildFortressGridGeometry({
+            oracleSecond: 1710000007,
+            price: 100092,
+        });
+        const state = createInitialFortressModeState();
+        state.sigma = FORTRESS_GLOBAL_CONFIG.sigmaRef;
+        state.lambdaIntensity = FORTRESS_GLOBAL_CONFIG.lambdaRef;
+        state.atrMean = 0;
+        const pRawByCellId = Object.fromEntries(geometry.cells.map((cell) => [cell.cellId, 0.25]));
+
+        const { quotes } = buildFortressQuotes({
+            geometry,
+            mode: FORTRESS_MAIN_MODE,
+            config: FORTRESS_GLOBAL_CONFIG,
+            modeState: state,
+            pRawByCellId,
+        });
+        const centerFirstWindow = quotes.find((quote) => (
+            quote.row === FORTRESS_MAIN_MODE.centerRow && quote.windowIndex === 0
+        ));
+        const outerFirstWindow = quotes.find((quote) => (
+            quote.row === FORTRESS_MAIN_MODE.centerRow + 2 && quote.windowIndex === 0
+        ));
+
+        expect(centerFirstWindow?.mBase).toBeCloseTo(3.912, 15);
+        expect(centerFirstWindow?.mFinal).toBeCloseTo(3.912 / 1.5, 15);
+        expect(outerFirstWindow?.mFinal).toBeCloseTo(3.912, 15);
     });
 });

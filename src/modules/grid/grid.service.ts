@@ -6,6 +6,12 @@ import { env } from 'src/config';
 import { normalizePrice } from 'src/libs/market.config';
 import { GridOracleStateService } from './fortress-engine/fortress-oracle-state.service';
 import { FortressStateEngine } from './fortress-engine/fortress-state-engine';
+import { FortressPricingCadence } from './fortress-engine/fortress-pricing-cadence';
+import { FORTRESS_GLOBAL_CONFIG, FORTRESS_MAIN_MODE } from './fortress-engine/fortress.config';
+import { generateFortressSeedParts, simulateFortressPaths } from './fortress-engine/fortress-path-simulator';
+import { computeFortressPWinMatrix } from './fortress-engine/fortress-brownian-bridge';
+import { buildFortressQuotes } from './fortress-engine/fortress-quote-builder';
+import { mapFortressQuotesToCells } from './fortress-engine/fortress-cell.mapper';
 
 const TIME_CELL = 5.0 * 1000;
 const PRICE_CELL = 25.0;
@@ -34,6 +40,12 @@ const MODEL_PARAMS = {
 
 @Injectable()
 export class GridService implements OnModuleInit {
+  private readonly fortressPricingCadence = new FortressPricingCadence(
+    env.fortress.bandwidthWarmupTicks,
+    env.fortress.bandwidthRefreshTicks,
+  );
+  private latestFortressCells: Cell[] = [];
+
   constructor(
     @Inject(EVENT_PUBLISHER)
     private readonly eventPublisher: EventPublisher,
@@ -89,7 +101,25 @@ export class GridService implements OnModuleInit {
       if (!latestTrade) return;
       const oracleUpdates = this.gridOracleStateService.ingestLatestTrade(latestTrade);
       for (const oracleUpdate of oracleUpdates) {
-        this.fortressStateEngine.updateOracle(oracleUpdate);
+        const cadenceDecision = this.fortressPricingCadence.next();
+        const transition = this.fortressStateEngine.updateOracle(oracleUpdate, {
+          runPricing: cadenceDecision.runPricing,
+          refreshBandWidth: cadenceDecision.refreshBandWidth,
+        });
+        if (cadenceDecision.runPricing && transition.geometry) {
+          this.latestFortressCells = this.buildFortressCells(
+            oracleUpdate.bar.close,
+            oracleUpdate.bar.oracleSecond,
+            transition,
+          );
+        }
+      }
+
+      if (env.grid.engine === 'fortress') {
+        if (this.latestFortressCells.length > 0) {
+          this.eventPublisher.emitGridUpdate(this.latestFortressCells);
+        }
+        return;
       }
 
       const { price, ts } = latestTrade;
@@ -144,5 +174,54 @@ export class GridService implements OnModuleInit {
 
       this.eventPublisher.emitGridUpdate(cells);
     }, 250);
+  }
+
+  private buildFortressCells(
+    price: number,
+    oracleSecond: number,
+    transition: ReturnType<FortressStateEngine['updateOracle']>,
+  ): Cell[] {
+    if (!transition.geometry) {
+      return this.latestFortressCells;
+    }
+
+    const horizon = Math.max(...FORTRESS_MAIN_MODE.windows.map(([, endSecond]) => endSecond))
+      + Math.max(0, FORTRESS_GLOBAL_CONFIG.lockOffset);
+    const paths = simulateFortressPaths({
+      price,
+      pathCount: FORTRESS_MAIN_MODE.mcNMin,
+      horizon,
+      sigma: transition.modeState.sigma,
+      lambdaIntensity: transition.modeState.lambdaIntensity,
+      jumpSampler: transition.modeState.jumpSampler,
+      seedParts: generateFortressSeedParts(
+        FORTRESS_GLOBAL_CONFIG.seed,
+        FORTRESS_MAIN_MODE.modeId,
+        oracleSecond,
+        price,
+      ),
+      mu: FORTRESS_GLOBAL_CONFIG.mu,
+      useAntithetic: FORTRESS_GLOBAL_CONFIG.useAntithetic,
+      epsilon: FORTRESS_GLOBAL_CONFIG.epsilon,
+    }).paths;
+    const pwin = computeFortressPWinMatrix({
+      geometry: transition.geometry,
+      paths,
+      sigma: transition.modeState.sigma,
+      lockOffset: FORTRESS_GLOBAL_CONFIG.lockOffset,
+      epsilon: FORTRESS_GLOBAL_CONFIG.epsilon,
+      varianceFloor: FORTRESS_GLOBAL_CONFIG.varianceFloor,
+    });
+    const { quotes } = buildFortressQuotes({
+      geometry: transition.geometry,
+      mode: FORTRESS_MAIN_MODE,
+      config: FORTRESS_GLOBAL_CONFIG,
+      modeState: transition.modeState,
+      pRawByCellId: pwin.pRawByCellId,
+    });
+
+    return mapFortressQuotesToCells(quotes, {
+      privateKey: env.secret.cellSignerKey,
+    });
   }
 }

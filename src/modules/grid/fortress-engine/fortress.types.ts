@@ -143,6 +143,7 @@ export interface FortressStateTransition {
     geometry: FortressGridGeometry | null;
     bandWidthDecision: FortressBandWidthDecision | null;
     runPricing: boolean;
+    refreshBandWidth: boolean;
     logReturn: number;
     vObserved: number;
     vPrevious: number;
@@ -156,6 +157,7 @@ export interface FortressStateTransition {
 
 export interface FortressOracleUpdateOptions {
     runPricing?: boolean;
+    refreshBandWidth?: boolean;
 }
 
 export interface FortressPathSimulationInput {

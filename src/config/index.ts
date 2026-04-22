@@ -46,6 +46,9 @@ const envVarsSchema = Joi.object()
 
     RUN_PRICE_TICK: Joi.boolean().required(),
     RUN_SETTLEMENT: Joi.boolean().required(),
+    GRID_ENGINE: Joi.string().valid('legacy', 'fortress').default('legacy'),
+    FORTRESS_BANDWIDTH_WARMUP_TICKS: Joi.number().integer().min(0).default(100),
+    FORTRESS_BANDWIDTH_REFRESH_TICKS: Joi.number().integer().min(1).default(3600),
   })
   .unknown();
 
@@ -99,6 +102,13 @@ export const env = {
     runSettlement:
       envVars.RUN_SETTLEMENT === true ||
       envVars.RUN_SETTLEMENT === 'true',
+  },
+  grid: {
+    engine: envVars.GRID_ENGINE as 'legacy' | 'fortress',
+  },
+  fortress: {
+    bandwidthWarmupTicks: envVars.FORTRESS_BANDWIDTH_WARMUP_TICKS,
+    bandwidthRefreshTicks: envVars.FORTRESS_BANDWIDTH_REFRESH_TICKS,
   },
   secret: {
     jwtSecret: envVars.JWT_SECRET,
