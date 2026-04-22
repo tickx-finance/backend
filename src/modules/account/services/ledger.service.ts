@@ -4,6 +4,7 @@ import { MoreThan, Repository } from 'typeorm';
 import { LedgerEntry } from '../entities/ledger-entry.entity';
 import { EconomicEventType, BalanceDelta, snapshotApplyDelta, BalanceSnapshot } from '../types';
 import { LedgerSnapshot } from '../entities/ledger-snapshot.entity';
+import { uuidv7 } from 'uuidv7';
 
 @Injectable()
 export class LedgerService {
@@ -22,13 +23,21 @@ export class LedgerService {
         economicKey: string,
         deltas: BalanceDelta,
     ): Promise<LedgerEntry> {
-        const entry = this.entryRepo.create({
-            userId,
-            eventType,
-            economicKey,
-            deltas,
-        });
-        return await this.entryRepo.save(entry);
+        const result = await this.entryRepo
+            .createQueryBuilder()
+            .insert()
+            .into(LedgerEntry)
+            .values({
+                id: uuidv7(),
+                userId,
+                eventType,
+                economicKey,
+                deltas,
+            })
+            .returning('*') // Tells Postgres to return the row it just created
+            .execute();
+
+        return result.generatedMaps[0] as LedgerEntry;
     }
 
     async getEntry(userId: string, economicKey: string): Promise<LedgerEntry> {

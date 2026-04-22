@@ -8,7 +8,6 @@ export class LedgerEntry {
     id: string;
 
     @Column()
-    @Index()
     userId: string;
 
     @Column({
