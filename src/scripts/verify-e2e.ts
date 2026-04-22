@@ -40,8 +40,11 @@ async function run() {
             signature
         });
         const accessToken = loginRes.data.accessToken;
-        const wssKey = loginRes.data.wssKey;
-        console.log(`   Login Success! JWT obtained.`);
+        console.log(`   Login Success! JWT obtained. ${accessToken}`);
+
+        // 2d. Get WSS Key
+        const wssKeyRes = await axios.get(`${API_URL}/auth/wss-key`, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const wssKey = wssKeyRes.data.key;
         console.log(`   WSS Key: ${wssKey}`);
 
         // 3. Deposit

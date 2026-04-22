@@ -22,7 +22,7 @@ export class AuthController {
         return this.authService.login(body.address, body.signature);
     }
 
-    @Post('wss-key')
+    @Get('wss-key')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get a new WSS key (requires JWT)' })
