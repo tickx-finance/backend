@@ -9,6 +9,8 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
+    private readonly wssKeyCache = new Map<string, { key: string, expiresAt: number }>();
+
     constructor(@InjectRedis() private readonly redis: Redis) { }
 
     async generateChallenge(address: string): Promise<string> {
@@ -65,21 +67,42 @@ export class AuthService {
 
         // WSS key valid for 2 minutes (short lived for realtime authorization)
         const ttl = 120;
-        await this.redis.set(`auth:wss:${ethers.getAddress(address)}`, secretKeyHex, 'EX', ttl);
+        const normalizedAddress = ethers.getAddress(address);
+        const expiresAt = Date.now() + ttl * 1000;
+
+        this.wssKeyCache.set(normalizedAddress, {
+            key: secretKeyHex,
+            expiresAt
+        });
+
+        // Set a timeout to clean up memory
+        setTimeout(() => {
+            const cached = this.wssKeyCache.get(normalizedAddress);
+            if (cached && cached.expiresAt <= Date.now()) {
+                this.wssKeyCache.delete(normalizedAddress);
+            }
+        }, ttl * 1000);
 
         return {
             key: secretKeyHex,
-            expiresAt: Date.now() + ttl * 1000,
+            expiresAt,
         };
     }
 
     async validateWssSignature(address: string, message: string, signature: string, withChallenge?: boolean): Promise<boolean> {
         const normalizedAddress = ethers.getAddress(address);
-        const storedKey = await this.redis.get(`auth:wss:${normalizedAddress}`);
+        const cached = this.wssKeyCache.get(normalizedAddress);
 
-        if (!storedKey) {
+        if (!cached) {
             return false;
         }
+
+        if (cached.expiresAt < Date.now()) {
+            this.wssKeyCache.delete(normalizedAddress);
+            return false;
+        }
+
+        const storedKey = cached.key;
         const keyBuffer = Buffer.from(storedKey, 'hex');
 
         const hmac = crypto.createHmac('sha256', keyBuffer)

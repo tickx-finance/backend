@@ -83,7 +83,7 @@ export class OrderService implements OnModuleInit {
                     BigNumber(priceTick.price).lte(order.upperPrice) &&
                     BigNumber(priceTick.price).gte(order.lowerPrice);
                 if (win) {
-                    this.logger.debug(`Order ${order.orderId} won at ${priceTick.timestamp}`);
+                    this.logger.debug(`Order ${order.orderId} won at ${priceTick.timestamp}, ${priceTick.price}`);
                     winSettlePromises.push(this.settleOrder(order, priceTick.timestamp, true));
                 }
             }
