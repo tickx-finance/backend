@@ -38,6 +38,7 @@ const envVarsSchema = Joi.object()
     KAFKA_RUNNING_FLAG: Joi.boolean().default(true),
 
     JWT_SECRET: Joi.string().required(),
+    APP_API_KEY: Joi.string().required(),
 
     ADMIN_PRIVATE_KEY: Joi.string().required(),
 
@@ -101,6 +102,7 @@ export const env = {
   },
   secret: {
     jwtSecret: envVars.JWT_SECRET,
+    appApiKey: envVars.APP_API_KEY,
     adminPrivateKey: envVars.ADMIN_PRIVATE_KEY,
     cellSignerKey: envVars.CELL_SIGNER_KEY,
   }

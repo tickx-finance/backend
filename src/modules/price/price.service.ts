@@ -9,7 +9,9 @@ import WebSocket from 'ws';
 import { AggTradePayload, LatestPriceState, PriceTick } from 'src/libs/price-tick';
 import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 import { OrderPriceTickChannel } from '../order/price-tick.channel';
+
 import { env } from 'src/config';
+import { OhlcService } from './ohlc.service';
 
 @Injectable()
 export class PriceService implements OnModuleInit, OnModuleDestroy {
@@ -18,6 +20,7 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
     @Inject(EVENT_PUBLISHER)
     private readonly eventPublisher: EventPublisher,
     private readonly orderPriceTickChannel: OrderPriceTickChannel,
+    private readonly ohlcService: OhlcService,
   ) { }
 
   // ========================
@@ -115,6 +118,9 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
         price: this.latestTrade.price,
       };
       this.orderPriceTickChannel.send(priceTick);
+
+      // Feed price tick to OHLC service for candle aggregation
+      this.ohlcService.processPriceTick(priceTick);
 
       // this.logger.debug(
       //   `TRADE PRICE: ${price} | QTY: ${qty} | SIDE: ${isSell ? 'SELL' : 'BUY'
