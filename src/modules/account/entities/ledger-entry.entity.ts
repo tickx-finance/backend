@@ -17,7 +17,7 @@ export class LedgerEntry {
     })
     eventType: EconomicEventType;
 
-    @Column({ unique: true })
+    @Column({ unique: true, type: 'varchar', length: 255 })
     economicKey: string; // Serialized EconomicKey or Composite String
 
     @Column({ type: 'jsonb' })
