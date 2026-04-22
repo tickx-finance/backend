@@ -68,7 +68,7 @@ export class StrategyController {
 
       // Hardcoded response - NORMAL regime as per spec
       const response: StrategyRegimeResponse = {
-        regimeId: 2,                    // NORMAL = 2
+        regimeId: Date.now(),                    // NORMAL = 2
         fortressSpreadBps: 150,         // 1.5% spread
         maxMultiplier: 100,             // 100x max multiplier
         effectiveTs: now,               // Current timestamp (newest)
