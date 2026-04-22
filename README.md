@@ -1,4 +1,77 @@
-# Project Setup
+# Tapl Backend
+
+Backend service for the Tapl platform, built with NestJS, TypeScript, and EVM integrations.
+
+This repository contains the application backend and worker processes that power:
+- authentication and account flows
+- order, settlement, payment, and distribution logic
+- price, risk, and strategy modules
+- socket-based realtime updates
+- blockchain-facing integrations via Ether.js and generated contract bindings
+
+## Architecture Overview
+
+- The main NestJS app exposes APIs and coordinates business logic.
+- A dedicated worker process handles background and listener-style jobs.
+- PostgreSQL stores core relational data and migration-managed schemas.
+- Redis supports caching and queue-like runtime coordination.
+- MinIO provides object storage for backend assets and files.
+- Kafka supports event-driven flows when enabled.
+- EVM integrations connect the backend to BASE-compatible onchain infrastructure.
+
+```mermaid
+flowchart LR
+  A[Client Apps] --> B[NestJS API]
+  B --> C[PostgreSQL]
+  B --> D[Redis]
+  B --> E[MinIO]
+  B --> F[Kafka]
+  B --> G[EVM RPC / Smart Contracts]
+  H[Worker Service] --> C
+  H --> D
+  H --> F
+  H --> G
+  B --> I[Socket Gateway]
+  I --> A
+```
+
+## Backend Domains
+
+| Domain | Responsibility |
+|---|---|
+| `auth` | Authentication, authorization, and access control |
+| `account` | User account management |
+| `order` | Order lifecycle handling |
+| `settlement` | Settlement processing and related jobs |
+| `payment` | Payment-related business flows |
+| `distribution` | Distribution and allocation flows |
+| `price` | Price ingestion and processing |
+| `risk` | Risk checks and policy logic |
+| `strategy` | Strategy configuration and execution support |
+| `socket` | Realtime communication |
+| `worker` | Background processing and listeners |
+
+## Repository Structure
+
+```text
+.
+├── src/
+│   ├── adapters/
+│   ├── config/
+│   ├── libs/
+│   ├── migrations/
+│   ├── modules/
+│   ├── scripts/
+│   └── utils/
+├── system-design/
+├── benchmark-results/
+├── docker-compose.yml
+├── docker.env.example
+├── README.example.md
+└── README.md
+```
+
+## Project Setup
 
 This project is an EVM-based application utilizing Ether.js and integrating with BASE infrastructure. Below are the necessary steps to set up and run the project.
 

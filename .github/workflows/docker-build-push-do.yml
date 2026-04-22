@@ -3,7 +3,7 @@ name: Build and Publish Docker Image Into Digital Ocean Container Registry
 on:
   push:
     branches:
-      - tapfun-chainlink-be
+      - Tapl-chainlink-be
 
 jobs:
   build-push:

@@ -44,7 +44,7 @@ async function bootstrap() {
 
   if (process.env.NODE_ENV !== 'production') {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Tapfun Bot API')
+      .setTitle('Tapl Bot API')
       .setVersion('0.0.12')
       .addBearerAuth()
       .build();
