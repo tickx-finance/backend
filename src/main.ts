@@ -44,17 +44,8 @@ async function bootstrap() {
 
   if (process.env.NODE_ENV !== 'production') {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Viral Bot API')
+      .setTitle('Tapfun Bot API')
       .setVersion('0.0.12')
-      .addApiKey(
-        {
-          type: 'apiKey',
-          name: 'x-jwt',
-          in: 'header',
-          description: 'JWT token for authentication',
-        },
-        'x-jwt',
-      )
       .build();
 
     const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);

@@ -100,14 +100,14 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
     setInterval(() => {
       if (!this.latestTrade) return;
 
-      const { price, qty, isSell } = this.latestTrade;
+      // const { price, qty, isSell } = this.latestTrade;
 
       this.eventPublisher.emitNewPrice(this.latestTrade);
 
-      this.logger.debug(
-        `TRADE PRICE: ${price} | QTY: ${qty} | SIDE: ${isSell ? 'SELL' : 'BUY'
-        }`,
-      );
+      // this.logger.debug(
+      //   `TRADE PRICE: ${price} | QTY: ${qty} | SIDE: ${isSell ? 'SELL' : 'BUY'
+      //   }`,
+      // );
     }, 100);
   }
 
