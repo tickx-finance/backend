@@ -106,7 +106,6 @@ export class OrderService implements OnModuleInit {
 
     async placeOrder(userId: string, dto: PlaceOrderDto): Promise<Order> {
         // 0. validate cell
-
         // a. Cell deadline check
         const xSize = defaultMarketConfig.gridXSize;
         if (dto.cell.startTs < Date.now() + xSize) {
@@ -150,6 +149,16 @@ export class OrderService implements OnModuleInit {
         // For simplicity/uniqueness in JS, we can use `${userId}:${dto.cellId}` as the ID or hash it.
         const orderId = `${userId}:${cellId}`;
 
+        // 6. Fanout ws
+        const wsMsg: OrderUpdateMessage = {
+            orderId,
+            userId,
+            marketId: dto.marketId,
+            cell: dto.cell,
+            status: OrderStatus.OPEN,
+        }
+        await this.events.emitOrderUpdate(wsMsg)
+
         // TODO: We need cellTimeEnd to bucket correctly. 
         // For now, receiving it in DTO or defaulting.
         // Let's assume the client passes it or we fetch it. 
@@ -184,15 +193,6 @@ export class OrderService implements OnModuleInit {
         bucket.set(orderId, order);
 
         this.logger.log(`Order placed: ${orderId}`);
-        // 6. Fanout ws
-        const wsMsg: OrderUpdateMessage = {
-            orderId,
-            userId,
-            marketId: dto.marketId,
-            cell: dto.cell,
-            status: OrderStatus.OPEN,
-        }
-        await this.events.emitOrderUpdate(wsMsg)
 
         // 7. Save to DB
         const dbRecord = this.orderRepository.create(order);
