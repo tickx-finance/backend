@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
 import { LedgerEntry } from '../entities/ledger-entry.entity';
-import { EconomicEventType, BalanceDelta, snapshotApplyDelta } from '../types';
+import { EconomicEventType, BalanceDelta, snapshotApplyDelta, BalanceSnapshot } from '../types';
 import { LedgerSnapshot } from '../entities/ledger-snapshot.entity';
 
 @Injectable()
@@ -36,33 +36,42 @@ export class LedgerService {
     }
 
     async buildNextSnapshot(userId: string): Promise<LedgerSnapshot> {
-        let lastLedgerSnapshot = await this.snapshotRepo.findOne({
+        let lastLedgerSnapshot: LedgerSnapshot = await this.snapshotRepo.findOne({
             where: { userId },
             order: { ledgerSeq: 'DESC' },
         });
 
-        if (!lastLedgerSnapshot) {
-            lastLedgerSnapshot = this.snapshotRepo.create({
-                userId,
-                ledgerSeq: '0',
-                balanceAfter: {
-                    free: '0',
-                    freeTap: '0',
-                    locked: '0',
-                },
-            });
-            await this.snapshotRepo.save(lastLedgerSnapshot);
+        let lastBalanceSnapshot: BalanceSnapshot;
+
+        if (lastLedgerSnapshot) {
+            lastBalanceSnapshot = lastLedgerSnapshot.balanceAfter;
+        } else {
+            lastBalanceSnapshot = {
+                free: '0',
+                freeTap: '0',
+                locked: '0',
+            };
         }
 
-        const lastBalanceSnapshot = lastLedgerSnapshot.balanceAfter;
+        const where: any = { userId };
+
+        if (lastLedgerSnapshot) {
+            where.id = MoreThan(lastLedgerSnapshot.ledgerSeq);
+        }
 
         const allEntriesAfterLast = await this.entryRepo.find({
-            where: { userId, id: MoreThan(lastLedgerSnapshot.ledgerSeq) },
+            where,
             order: { id: 'ASC' },
         });
 
         if (!allEntriesAfterLast.length) {
-            return lastLedgerSnapshot;
+            return {
+                id: 0,
+                userId,
+                ledgerSeq: '0',
+                balanceAfter: lastBalanceSnapshot,
+                createdAt: new Date(),
+            };
         }
 
         let balanceSnapshot = lastBalanceSnapshot;

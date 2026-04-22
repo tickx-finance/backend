@@ -40,6 +40,8 @@ const envVarsSchema = Joi.object()
     JWT_SECRET: Joi.string().required(),
 
     ADMIN_PRIVATE_KEY: Joi.string().required(),
+
+    CELL_SIGNER_KEY: Joi.string().required(),
   })
   .unknown();
 
@@ -91,6 +93,7 @@ export const env = {
   secret: {
     jwtSecret: envVars.JWT_SECRET,
     adminPrivateKey: envVars.ADMIN_PRIVATE_KEY,
+    cellSignerKey: envVars.CELL_SIGNER_KEY,
   }
 };
 

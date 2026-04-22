@@ -1,3 +1,5 @@
+import { Mutex } from 'async-mutex';
+
 export class TokenBucket {
     private readonly capacity: number
     private readonly refillRatePerMs: number
@@ -34,50 +36,44 @@ export class TokenBucket {
         this.lastRefillTs = now
     }
 
-    /**
-     * Mutex-protected consume
-     */
     async consume(weight: number): Promise<boolean> {
-        if (weight <= 0) return true
-        if (weight > this.capacity) return false
+        if (weight <= 0) return true;
+        if (weight > this.capacity) return false;
 
-        const unlock = await this.mutex.lock()
+        const release = await this.mutex.acquire();
         try {
-            this.refill()
+            this.refill();
 
             if (this.tokens < weight) {
-                return false
+                return false;
             }
 
-            this.tokens -= weight
-            return true
+            this.tokens -= weight;
+            return true;
         } finally {
-            unlock()
+            release();
         }
     }
 
-    /**
-     * Safe read (also mutexed)
-     */
     async getAvailable(): Promise<number> {
-        const unlock = await this.mutex.lock()
+        const release = await this.mutex.acquire();
         try {
-            this.refill()
-            return this.tokens
+            this.refill();
+            return this.tokens;
         } finally {
-            unlock()
+            release();
         }
     }
 
     async getWaitTimeMs(weight: number): Promise<number> {
-        const unlock = await this.mutex.lock()
+        const release = await this.mutex.acquire();
         try {
-            this.refill()
-            if (this.tokens >= weight) return 0
-            const missing = weight - this.tokens
-            return Math.ceil(missing / this.refillRatePerMs)
+            this.refill();
+            if (this.tokens >= weight) return 0;
+            const missing = weight - this.tokens;
+            return Math.ceil(missing / this.refillRatePerMs);
         } finally {
-            unlock()
+            release();
         }
     }
 }

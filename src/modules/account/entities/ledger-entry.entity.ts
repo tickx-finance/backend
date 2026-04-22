@@ -1,10 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index, Unique } from 'typeorm';
+import { Entity, Column, CreateDateColumn, Index, PrimaryColumn } from 'typeorm';
 import { EconomicEventType, BalanceDelta } from '../types';
+import { uuidv7 } from 'uuidv7';
 
 @Entity('ledger_entries')
-@Unique(['userId', 'economicKey'])
 export class LedgerEntry {
-    @PrimaryGeneratedColumn({ type: 'bigint' })
+    @PrimaryColumn({ type: 'uuid' })
     id: string;
 
     @Column()
@@ -17,7 +17,7 @@ export class LedgerEntry {
     })
     eventType: EconomicEventType;
 
-    @Column()
+    @Column({ unique: true })
     economicKey: string; // Serialized EconomicKey or Composite String
 
     @Column({ type: 'jsonb' })
@@ -25,4 +25,9 @@ export class LedgerEntry {
 
     @CreateDateColumn()
     createdAt: Date;
+
+    constructor() {
+        // Automatically assign a UUID v7 on instantiation
+        this.id = uuidv7();
+    }
 }

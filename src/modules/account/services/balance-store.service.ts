@@ -14,7 +14,7 @@ export class BalanceStoreService {
                 free: '0',
                 freeTap: '0',
                 locked: '0',
-                lastLedgerSeq: 0,
+                lastLedgerSeq: '0',
             });
         }
     }
@@ -40,7 +40,7 @@ export class BalanceStoreService {
      * A ledger entry must be inserted before applying delta. and that ledger entry id will be used as lastLedgerSeq.
      * This method trusts the delta is valid to apply.
      */
-    applyDelta(userId: string, lastLedgerSeq: number, delta: BalanceDelta) {
+    applyDelta(userId: string, lastLedgerSeq: string, delta: BalanceDelta) {
         this.initUser(userId);
         const balance = this.balances.get(userId)!;
 

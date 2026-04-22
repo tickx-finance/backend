@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AccountService } from '../account/account.service';
 import { PlaceOrderDto } from './dto/place-order.dto';
 import { OrderStatus } from './types';
@@ -8,65 +8,116 @@ import { OrderUpdateMessage } from '../socket/types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { Repository } from 'typeorm';
-import { buildCellFromOrder } from 'src/libs/cell';
+import { buildCellFromOrder, signCell } from 'src/libs/cell';
 import { PriceTick } from 'src/libs/price-tick';
 import { defaultMarketConfig, getSettledStartTs } from 'src/libs/market.config';
 import { BigNumber } from 'bignumber.js';
+import { ORDER_EVENT_PUBLISHER, OrderEventPublisher } from './order.events';
+import { env } from 'src/config';
 
 @Injectable()
-export class OrderService {
+export class OrderService implements OnModuleInit {
     private readonly logger = new Logger(OrderService.name);
 
     // In-memory state
     // public for testing/inspection
-    public readonly userCellIndex = new Map<string, Set<string>>(); // userId -> Set<cellId>
-    public readonly activeOrdersByBucket = new Map<number, Map<string, Order>>(); // timeBucket -> Map<orderId, ActiveOrder>
+    private userCellIndex = new Map<string, Set<string>>(); // userId -> Set<cellId>
+    private activeOrdersByBucket = new Map<number, Map<string, Order>>(); // timeBucket -> Map<orderId, ActiveOrder>
 
     private rateLimiters = new Map<string, TokenBucket>();
-    private priceTickQueue: PriceTick[] = [];
+
     constructor(
         @InjectRepository(Order)
         private readonly orderRepository: Repository<Order>,
         private readonly accountService: AccountService,
-        private readonly socketService: SocketService,
+        @Inject(ORDER_EVENT_PUBLISHER)
+        private readonly events: OrderEventPublisher,
     ) {
     }
 
-    enqueuePriceTick(priceTick: PriceTick) {
-        this.priceTickQueue.push(priceTick);
-        this.processMarketPriceTicks();
+    async onModuleInit() {
+        this.logger.debug('Initializing OrderService');
+        console.log('----------Initializing OrderService');
+        const activeOrders = await this.getPeristedActiveOrders();
+        this.logger.debug(`Loaded ${activeOrders.length} active orders from DB`);
+        console.log('----------Loaded', activeOrders.length, 'active orders from DB');
+        this.activeOrdersByBucket = this.buildActiveOrdersByBucket(activeOrders);
+        this.logger.debug(`Loaded ${this.activeOrdersByBucket.size} active orders into memory`);
+        console.log('----------Loaded', this.activeOrdersByBucket.size, 'active orders into memory');
+        this.userCellIndex = this.buildUserCellIndex(activeOrders);
+        this.logger.debug(`Loaded ${this.userCellIndex.size} user cells into memory`);
+        console.log('----------Loaded', this.userCellIndex.size, 'user cells into memory');
     }
 
-    async processMarketPriceTicks() {
-        while (this.priceTickQueue.length > 0) {
-            const priceTick = this.priceTickQueue.shift();
-            this.logger.log(`Processing price tick: ${priceTick}`);
-            const settledStartTs = getSettledStartTs(priceTick.timestamp);
-            const bucket = this.activeOrdersByBucket.get(settledStartTs);
-            if (bucket) {
-                for (const order of bucket.values()) {
-                    const win = BigNumber(priceTick.price).lte(order.upperPrice) && BigNumber(priceTick.price).gte(order.lowerPrice);
-                    if (win) {
-                        this.settleOrder(order, priceTick.timestamp, true);
-                    }
-                }
+    buildActiveOrdersByBucket(activeOrders: Order[]) {
+        const bucketMap = new Map<number, Map<string, Order>>();
+        for (const order of activeOrders) {
+            const bucket = bucketMap.get(order.cellTimeStart);
+            if (!bucket) {
+                bucketMap.set(order.cellTimeStart, new Map());
             }
-            // fetch all bucket that has endTs <= priceTick.timestamp
-            for (const [bucketStartTs, bucket] of this.activeOrdersByBucket) {
-                if (bucketStartTs + defaultMarketConfig.gridXSize < priceTick.timestamp) {
-                    for (const order of bucket.values()) {
-                        this.settleOrder(order, priceTick.timestamp, false);
-                    }
+            bucketMap.get(order.cellTimeStart)!.set(order.orderId, order);
+        }
+        return bucketMap;
+    }
+    buildUserCellIndex(activeOrders: Order[]) {
+        const userCellIndex = new Map<string, Set<string>>();
+        for (const order of activeOrders) {
+            const userCells = userCellIndex.get(order.userId);
+            if (!userCells) {
+                userCellIndex.set(order.userId, new Set());
+            }
+            userCellIndex.get(order.userId)!.add(buildCellFromOrder(order).id);
+        }
+        return userCellIndex;
+    }
+
+    async handleSinglePriceTick(priceTick: PriceTick) {
+        this.logger.debug(`Processing price tick ${priceTick.timestamp}`);
+
+        const settledStartTs = getSettledStartTs(priceTick.timestamp);
+
+        // 1️⃣ Winning bucket
+        const bucket = this.activeOrdersByBucket.get(settledStartTs);
+        const winSettlePromises: Promise<void>[] = [];
+        if (bucket) {
+            for (const order of bucket.values()) {
+                const win =
+                    BigNumber(priceTick.price).lte(order.upperPrice) &&
+                    BigNumber(priceTick.price).gte(order.lowerPrice);
+                if (win) {
+                    winSettlePromises.push(this.settleOrder(order, priceTick.timestamp, true));
                 }
             }
         }
+        await Promise.all(winSettlePromises);
+
+        // 2️⃣ Expired buckets
+        const expireSettlePromises: Promise<void>[] = [];
+        for (const [bucketStartTs, bucket] of this.activeOrdersByBucket) {
+            if (bucketStartTs + defaultMarketConfig.gridXSize < priceTick.timestamp) {
+                for (const order of bucket.values()) {
+                    expireSettlePromises.push(this.settleOrder(order, priceTick.timestamp, false));
+                }
+            }
+        }
+        await Promise.all(expireSettlePromises);
     }
+
 
     async placeOrder(userId: string, dto: PlaceOrderDto): Promise<Order> {
         // 0. validate cell
+
+        // a. Cell deadline check
         const xSize = defaultMarketConfig.gridXSize;
         if (dto.cell.startTs < Date.now() + xSize) {
             throw new Error("Cell hit deadline. Can't place it anymore")
+        }
+
+        // b. Cell signature check
+        const expectedSignature = signCell(dto.cell, env.secret.cellSignerKey);
+        if (dto.cell.gridSignature !== expectedSignature) {
+            throw new Error("Invalid cell signature");
         }
         // 1. Rate Limit
         let rateLimiter = this.rateLimiters.get(userId);
@@ -141,7 +192,7 @@ export class OrderService {
             cell: dto.cell,
             status: OrderStatus.OPEN,
         }
-        await this.socketService.emitOrderUpdate(wsMsg)
+        await this.events.emitOrderUpdate(wsMsg)
 
         // 7. Save to DB
         const dbRecord = this.orderRepository.create(order);
@@ -179,8 +230,10 @@ export class OrderService {
             marketId: order.marketId,
             cell,
             status: OrderStatus.SETTLED,
+            settledWin: win,
+            settledTimestamp: settledTs,
         }
-        await this.socketService.emitOrderUpdate(wsMsg)
+        await this.events.emitOrderUpdate(wsMsg)
 
         // 4. Cleanup User Index
         const userCells = this.userCellIndex.get(order.userId);
@@ -205,5 +258,17 @@ export class OrderService {
         order.settledWin = win;
 
         await this.orderRepository.save(order);
+    }
+
+    async getOrderById(orderId: string): Promise<Order | null> {
+        return this.orderRepository.findOneBy({ orderId });
+    }
+
+    async getPeristedActiveOrders(): Promise<Order[]> {
+        return this.orderRepository.find({
+            where: {
+                status: OrderStatus.OPEN,
+            },
+        });
     }
 }

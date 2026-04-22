@@ -43,24 +43,24 @@ async function runVerification() {
         await accountService.deposit(userId, '1000', 'dep-2', 1);
         await printBalance();
         // 2. Place Bet
-        // console.log('2. Placing bet 100...');
-        // await accountService.placeBet(userId, '100', 'market-1', 'cell-1');
+        console.log('2. Placing bet 100...');
+        await accountService.placeBet(userId, '100', 'market-1', 'cell-1');
 
-        // await printBalance();
+        await printBalance();
         // 2.1 Bet Settle
-        // console.log('2.1 Bet Settle 100...');
-        // await accountService.settleBet(userId, '100', true, '1.1', 'market-1', 'cell-1');
+        console.log('2.1 Bet Settle 100...');
+        await accountService.settleBet(userId, '100', true, '1.1', 'market-1', 'cell-1');
 
-        // await printBalance();
+        await printBalance();
         // 3. Withdraw request
-        // console.log('3. Withdrawing 500...');
-        // await accountService.withdrawRequested(userId, '500', 'with-1');
-        // await printBalance();
+        console.log('3. Withdrawing 500...');
+        await accountService.withdrawRequested(userId, '500', 'with-1');
+        await printBalance();
 
         // 4. Withdraw succeeded
-        // console.log('4. Withdrawing 500...');
-        // await accountService.withdrawSucceeded(userId, '500', 'with-1', 1);
-        // await printBalance();
+        console.log('4. Withdrawing 500...');
+        await accountService.withdrawSucceeded(userId, '500', 'with-1', 1);
+        await printBalance();
 
         console.log('Verification Success! Check logs/DB for details.');
     } catch (error) {

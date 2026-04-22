@@ -33,7 +33,7 @@ export class AccountService {
             balance = {
                 userId,
                 ...ledgerSnapshot.balanceAfter,
-                lastLedgerSeq: Number(ledgerSnapshot.ledgerSeq),
+                lastLedgerSeq: ledgerSnapshot.ledgerSeq,
             } as BalanceState;
             this.balanceStore.set(userId, balance);
         }
@@ -210,13 +210,13 @@ export class AccountService {
 
         // 2. Persist Fact (Ledger)
 
-        const economicKey = `${type.valueOf()}:${ref}`;
+        const economicKey = `${userId}:${type.valueOf()}:${ref}`;
 
         try {
             const entry = await this.ledger.append(userId, type, economicKey, delta);
 
             // 3. Update Memory
-            this.balanceStore.applyDelta(userId, Number(entry.id), delta);
+            this.balanceStore.applyDelta(userId, entry.id, delta);
 
             // 4. Commit WAL
             await this.wal.appendCommit(this.shardQueue.getShardId(userId), walRef);

@@ -1,9 +1,10 @@
-import { Column, Entity } from "typeorm";
-import { OrderStatus } from "../types";
+import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { OrderStatus } from '../types';
+import { BigIntMsTransformer } from 'src/libs/transformers';
 
 @Entity('orders')
 export class Order {
-    @Column({ primary: true })
+    @PrimaryColumn()
     orderId: string;
 
     @Column()
@@ -12,33 +13,46 @@ export class Order {
     @Column()
     marketId: string;
 
-    @Column()
+    @Column({
+        type: 'bigint',
+        transformer: BigIntMsTransformer,
+    })
     cellTimeStart: number;
 
-    @Column()
+    @Column({
+        type: 'bigint',
+        transformer: BigIntMsTransformer,
+    })
     cellTimeEnd: number;
 
-    @Column()
+    @Column({ type: 'numeric' })
     lowerPrice: string;
 
-    @Column()
+    @Column({ type: 'numeric' })
     upperPrice: string;
 
-    @Column()
+    @Column({ type: 'numeric' })
     amount: string;
 
-    @Column()
+    @Column({ type: 'numeric' })
     rewardRate: string;
 
-    @Column()
+    @Column({
+        type: 'bigint',
+        transformer: BigIntMsTransformer,
+    })
     placedAt: number;
 
-    @Column({ enum: OrderStatus })
+    @Column({ type: 'enum', enum: OrderStatus })
     status: OrderStatus;
 
-    @Column()
+    @Column({
+        type: 'bigint',
+        nullable: true,
+        transformer: BigIntMsTransformer,
+    })
     settledAt?: number;
 
-    @Column()
+    @Column({ nullable: true })
     settledWin?: boolean;
 }

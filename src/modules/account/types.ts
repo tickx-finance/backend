@@ -60,6 +60,6 @@ export interface BalanceState {
     free: string;
     freeTap: string;
     locked: string;
-    lastLedgerSeq: number; // Last ledger sequence processed
+    lastLedgerSeq: string; // Last ledger sequence processed
 }
 
