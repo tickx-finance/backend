@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WorkerServiceSyncWorkflowId } from './worker-sync-workflow-id.service';
+import { WorkerService } from './worker.service';
+import { WorkerController } from './worker.controller';
 import { WorkflowIdUpdate } from './entities/workflow-id-update.entity';
 import { PriceIntegrityBatch } from './entities/price-integrity-batch.entity';
 import { BatchSubmitted } from './entities/batch-submitted.entity';
@@ -23,7 +25,8 @@ import { VolatilityRegime } from './entities/volatility-regime.entity';
       VolatilityRegime,
     ]),
   ],
-  providers: [WorkerServiceSyncWorkflowId],
-  exports: [WorkerServiceSyncWorkflowId],
+  controllers: [WorkerController],
+  providers: [WorkerServiceSyncWorkflowId, WorkerService],
+  exports: [WorkerServiceSyncWorkflowId, WorkerService],
 })
 export class WorkerModule {}
