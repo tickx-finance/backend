@@ -3,12 +3,12 @@ name: Build and Publish Docker Image Into Digital Ocean Container Registry
 on:
   push:
     branches:
-      - dev
+      - tapfun-chainlink-be
 
 jobs:
   build-push:
     uses: ./.github/workflows/reusable-docker-build-push.yml
     with:
-      docker_image_prefix: registry.digitalocean.com/github-registry/tap-fun-dev
+      docker_image_prefix: registry.digitalocean.com/github-registry/tap-fun-chainlink
     secrets:
       DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
