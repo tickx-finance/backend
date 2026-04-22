@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { BalanceUpdateMessage, DepositSuccessMessage, EventName, getGridRoom, getUserRoom, GridUpdateMessage, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from './types';
+import { AccountEventPublisher } from '../account/account.events';
+import { OrderEventPublisher } from '../order/order.events';
+import { PaymentEventPublisher } from '../payment/payment.events';
 
 @Injectable()
 @WebSocketGateway({
@@ -9,7 +12,7 @@ import { BalanceUpdateMessage, DepositSuccessMessage, EventName, getGridRoom, ge
         origin: '*', // TODO: change to production domain
     },
 })
-export class SocketService {
+export class SocketService implements AccountEventPublisher, OrderEventPublisher, PaymentEventPublisher {
     @WebSocketServer() server: Server;
     constructor() { }
 

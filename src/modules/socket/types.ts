@@ -68,7 +68,6 @@ export interface DepositSuccessMessage {
     logIndex: number;
     userId: string;
     amount: string;
-    asset: string;
     timestamp: number;
 }
 
@@ -76,7 +75,6 @@ export interface WithdrawQueuedMessage {
     sessionId: string;
     userId: string;
     amount: string;
-    asset: string;
     timestamp: number;
 }
 
@@ -84,14 +82,12 @@ export interface WithdrawCancelledMessage {
     sessionId: string;
     userId: string;
     amount: string;
-    asset: string;
     timestamp: number;
 }
 
 export interface WithdrawSuccessMessage {
     userId: string;
     amount: string;
-    asset: string;
     timestamp: number;
     txHash: string;
     logIndex: number;

@@ -20,7 +20,8 @@ It is responsible for:
 
 ## 2. Core Invariants
 
-* Each **deposit `tx_hash`** is accounted for **at most once**
+* Each **deposit `tx_hash` & `log_index`** is accounted for **at most once**
+* Each **withdrawal `tx_hash` & `log_index`** is accounted for **at most once**
 * Each **withdrawal session** is settled **exactly once** (SUCCESS or EXPIRED)
 * At most **one OPEN withdrawal session** may exist per user
 * All balance mutations occur **only via Account Economic Events**
@@ -67,6 +68,7 @@ EconomicEvent {
   event_type: DEPOSIT
   user_id
   tx_hash
+  log_index
   deltas: {
     free_balance: +amount
   }
@@ -75,7 +77,7 @@ EconomicEvent {
 
 3. **Send to Account Service**
 
-   * The Account Service enforces idempotency using `tx_hash`
+   * The Account Service enforces idempotency using `tx_hash` & `log_index`
 
 4. **Persist deposit history** (async-safe)
 
@@ -180,6 +182,8 @@ EconomicEvent {
   event_type: WITHDRAW_SUCCESS
   user_id
   session_id
+  tx_hash
+  log_index
   deltas: {
     locked_balance: -amount
   }

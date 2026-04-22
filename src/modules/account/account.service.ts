@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Inject } from '@nestjs/common';
 import BigNumber from 'bignumber.js';
 
 import { ShardQueueService } from './services/shard-queue.service';
@@ -6,6 +6,7 @@ import { WalService } from './services/wal.service';
 import { LedgerService } from './services/ledger.service';
 import { BalanceStoreService } from './services/balance-store.service';
 import { EconomicEventType, BalanceDelta, BalanceState } from './types';
+import { ACCOUNT_EVENT_PUBLISHER, AccountEventPublisher } from './account.events';
 
 @Injectable()
 export class AccountService {
@@ -16,6 +17,8 @@ export class AccountService {
         private readonly wal: WalService,
         private readonly ledger: LedgerService,
         private readonly balanceStore: BalanceStoreService,
+        @Inject(ACCOUNT_EVENT_PUBLISHER)
+        private readonly accountEventPublisher: AccountEventPublisher,
     ) { }
 
     async getBalance(userId: string): Promise<BalanceState> {
@@ -221,6 +224,14 @@ export class AccountService {
             // 4. Commit WAL
             await this.wal.appendCommit(this.shardQueue.getShardId(userId), walRef);
 
+            // 5. Emit event
+            this.accountEventPublisher.emitBalanceUpdate({
+                userId,
+                free: this.balanceStore.get(userId).free,
+                locked: this.balanceStore.get(userId).locked,
+                freeTap: this.balanceStore.get(userId).freeTap,
+                timestamp: Date.now(),
+            });
             return entry;
         } catch (err) {
             await this.wal.appendAbort(this.shardQueue.getShardId(userId), walRef);

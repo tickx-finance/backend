@@ -15,10 +15,12 @@ import { ORDER_EVENT_PUBLISHER, OrderEventPublisher } from 'src/modules/order/or
 import { Cell, signCell } from 'src/libs/cell';
 import { env } from 'src/config';
 import { Order } from 'src/modules/order/entities/order.entity';
+import { AccountEventPublisher } from 'src/modules/account/account.events';
 
 // Mock Socket Service
-class MockOrderEventPublisher implements OrderEventPublisher {
+class MockEventPublisher implements OrderEventPublisher, AccountEventPublisher {
     async emitOrderUpdate(msg: any) { console.log(`[MockSocket] OrderUpdate: ${JSON.stringify(msg)}`); }
+    async emitBalanceUpdate(msg: any) { console.log(`[MockSocket] BalanceUpdate: ${JSON.stringify(msg)}`); }
 }
 
 async function runVerification() {
@@ -28,7 +30,7 @@ async function runVerification() {
     const originalDateNow = Date.now;
     Date.now = () => FIXED_NOW;
 
-    const mockOrderEventPublisher = new MockOrderEventPublisher();
+    const mockEventPublisher = new MockEventPublisher();
 
     const moduleFixture = await Test.createTestingModule({
         imports: [
@@ -44,7 +46,7 @@ async function runVerification() {
         ],
     })
         .overrideProvider(ORDER_EVENT_PUBLISHER)
-        .useValue(mockOrderEventPublisher)
+        .useValue(mockEventPublisher)
         .compile();
 
 

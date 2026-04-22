@@ -10,6 +10,7 @@ import { HealthCheckModule } from './health-check/health-check.module';
 import { AccountModule } from './account/account.module';
 import { AuthModule } from './auth/auth.module';
 import { OrderModule } from './order/order.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
     imports: [
@@ -24,7 +25,8 @@ import { OrderModule } from './order/order.module';
         HealthCheckModule,
         AccountModule,
         AuthModule,
-        OrderModule
+        OrderModule,
+        PaymentModule
     ],
 })
 export class AppModule implements OnModuleInit {
