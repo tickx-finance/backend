@@ -405,8 +405,8 @@ Runtime flow:
 4. Pricing cadence:
    - First `FORTRESS_BANDWIDTH_WARMUP_TICKS=100` closed ticks run `runPricing=true` so the engine can publish a warmup quote surface.
    - During warmup, only the final warmup tick sets `refreshBandWidth=true`; earlier warmup ticks keep the current dS and do not run `selectFinalFortressBandWidth`.
-   - After warmup, only every `FORTRESS_BANDWIDTH_REFRESH_TICKS=3600` closed ticks runs `runPricing=true` with `refreshBandWidth=true` to refresh adaptive dS and quote surface.
-   - All other closed ticks run `runPricing=false`, absorbing oracle price, volatility, jump detection, Hawkes intensity, and ATR without MC/quote work.
+   - After warmup, every closed tick runs `runPricing=true` so grid time anchors, cells, signatures, and quote surface keep moving.
+   - Only every `FORTRESS_BANDWIDTH_REFRESH_TICKS=3600` closed ticks sets `refreshBandWidth=true` to refresh adaptive dS; intermediate pricing ticks reuse the current dS.
 5. When pricing runs, engine rebuilds cells, computes adaptive MC paths/BB `P_raw`, builds quotes, and maps betable quotes to signed legacy `Cell[]`.
 6. Between pricing ticks, socket publishing reuses the last Fortress `Cell[]` surface.
 7. `eventPublisher.emitGridUpdate(cells)` publishes.

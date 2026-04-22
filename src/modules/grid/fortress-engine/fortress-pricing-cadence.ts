@@ -2,12 +2,12 @@ export interface FortressPricingCadenceDecision {
     closedTickCount: number;
     runPricing: boolean;
     refreshBandWidth: boolean;
-    reason: 'warmup' | 'initial-width' | 'refresh' | 'state-only';
+    reason: 'warmup' | 'initial-width' | 'refresh' | 'pricing';
 }
 
 export class FortressPricingCadence {
     private closedTickCount = 0;
-    private lastPricingTick = 0;
+    private lastBandWidthRefreshTick = 0;
 
     constructor(
         private readonly warmupTicks = 100,
@@ -20,7 +20,7 @@ export class FortressPricingCadence {
         if (this.closedTickCount <= this.warmupTicks) {
             const refreshBandWidth = this.closedTickCount === this.warmupTicks;
             if (refreshBandWidth) {
-                this.lastPricingTick = this.closedTickCount;
+                this.lastBandWidthRefreshTick = this.closedTickCount;
             }
             return {
                 closedTickCount: this.closedTickCount,
@@ -30,8 +30,8 @@ export class FortressPricingCadence {
             };
         }
 
-        if (this.closedTickCount - this.lastPricingTick >= this.refreshTicks) {
-            this.lastPricingTick = this.closedTickCount;
+        if (this.closedTickCount - this.lastBandWidthRefreshTick >= this.refreshTicks) {
+            this.lastBandWidthRefreshTick = this.closedTickCount;
             return {
                 closedTickCount: this.closedTickCount,
                 runPricing: true,
@@ -42,14 +42,14 @@ export class FortressPricingCadence {
 
         return {
             closedTickCount: this.closedTickCount,
-            runPricing: false,
+            runPricing: true,
             refreshBandWidth: false,
-            reason: 'state-only',
+            reason: 'pricing',
         };
     }
 
     reset(): void {
         this.closedTickCount = 0;
-        this.lastPricingTick = 0;
+        this.lastBandWidthRefreshTick = 0;
     }
 }
