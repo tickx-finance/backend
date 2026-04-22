@@ -133,7 +133,7 @@ export class GridService implements OnModuleInit {
           if (!gridVersionMap[gridTs]) gridVersionMap[gridTs] = {};
           if (!gridVersionMap[gridTs][startTs])
             gridVersionMap[gridTs][startTs] = {};
-          gridVersionMap[gridTs][startTs][lowerPrice] = cell;
+          gridVersionMap[cell.gridTs][cell.startTs][cell.lowerPrice] = cell;
 
           cells.push(cell);
         }
