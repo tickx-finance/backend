@@ -401,6 +401,8 @@ dist
 .serverless/**/*.zip
 contracts
 */migrations/*
+!src/migrations/
+!src/migrations/*.ts
 
 .vscode/*
 **/test.ts
