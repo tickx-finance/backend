@@ -344,7 +344,7 @@ export class SettlementService {
     }
     // Calculate payout: (amount * rewardRate)
     // For now, treat as direct multiplier
-    const payout = BigInt(Number(order.amount) * Number(order.rewardRate) * 1000000) / BigInt(1000000); // Assuming basis points
+    const payout = BigInt(Math.floor(Number(order.amount) * Number(order.rewardRate) * 1000000)) / BigInt(1000000); // Assuming basis points
     return payout.toString();
   }
 
