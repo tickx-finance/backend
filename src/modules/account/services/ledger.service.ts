@@ -22,6 +22,7 @@ export class LedgerService {
         eventType: EconomicEventType,
         economicKey: string,
         deltas: BalanceDelta,
+        ledgerSeq: string,
     ): Promise<LedgerEntry> {
         const result = await this.entryRepo
             .createQueryBuilder()
@@ -30,6 +31,7 @@ export class LedgerService {
             .values({
                 id: uuidv7(),
                 userId,
+                ledgerSeq,
                 eventType,
                 economicKey,
                 deltas,
@@ -65,19 +67,19 @@ export class LedgerService {
         const where: any = { userId };
 
         if (lastLedgerSnapshot) {
-            where.id = MoreThan(lastLedgerSnapshot.ledgerSeq);
+            where.ledgerSeq = MoreThan(lastLedgerSnapshot.ledgerSeq);
         }
 
         const allEntriesAfterLast = await this.entryRepo.find({
             where,
-            order: { id: 'ASC' },
+            order: { ledgerSeq: 'ASC' },
         });
 
         if (!allEntriesAfterLast.length) {
             return {
                 id: 0,
                 userId,
-                ledgerSeq: '0',
+                ledgerSeq: lastLedgerSnapshot?.ledgerSeq ?? '0',
                 balanceAfter: lastBalanceSnapshot,
                 createdAt: new Date(),
             };
@@ -90,7 +92,7 @@ export class LedgerService {
 
         const snapshot = this.snapshotRepo.create({
             userId,
-            ledgerSeq: allEntriesAfterLast[allEntriesAfterLast.length - 1].id,
+            ledgerSeq: allEntriesAfterLast[allEntriesAfterLast.length - 1].ledgerSeq,
             balanceAfter: balanceSnapshot,
         });
         return await this.snapshotRepo.save(snapshot);

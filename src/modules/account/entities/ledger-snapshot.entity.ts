@@ -11,7 +11,7 @@ export class LedgerSnapshot {
     @Index()
     userId: string;
 
-    @Column({ type: 'uuid' }) // should be ledger entry id (bigint)
+    @Column({ type: 'bigint' })
     ledgerSeq: string;
 
     @Column({ type: 'jsonb' })

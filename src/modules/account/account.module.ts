@@ -3,9 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountService } from './account.service';
 import { AccountController } from './account.controller';
 import { LedgerService } from './services/ledger.service';
-import { WalService } from './services/wal.service';
-import { BalanceStoreService } from './services/balance-store.service';
-import { ShardQueueService } from './services/shard-queue.service';
+import { RedisBalanceStoreService } from './services/redis-balance-store.service';
 import { LedgerEntry } from './entities/ledger-entry.entity';
 import { LedgerSnapshot } from './entities/ledger-snapshot.entity';
 import { SocketModule } from '../socket/socket.module';
@@ -19,9 +17,7 @@ import { SocketModule } from '../socket/socket.module';
     providers: [
         AccountService,
         LedgerService,
-        WalService,
-        BalanceStoreService,
-        ShardQueueService,
+        RedisBalanceStoreService,
     ],
     exports: [AccountService],
 })

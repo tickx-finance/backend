@@ -1,14 +1,19 @@
-import { Entity, Column, CreateDateColumn, Index, PrimaryColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, Index, PrimaryColumn, Unique } from 'typeorm';
 import { EconomicEventType, BalanceDelta } from '../types';
 import { uuidv7 } from 'uuidv7';
 
 @Entity('ledger_entries')
+@Unique(['userId', 'ledgerSeq'])
 export class LedgerEntry {
     @PrimaryColumn({ type: 'uuid' })
     id: string;
 
     @Column()
+    @Index()
     userId: string;
+
+    @Column({ type: 'bigint' })
+    ledgerSeq: string;
 
     @Column({
         type: 'enum',

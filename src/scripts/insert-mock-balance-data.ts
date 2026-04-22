@@ -1,6 +1,5 @@
 import dataSource from '../libs/typeorm.config';
 import { LedgerSnapshot } from '../modules/account/entities/ledger-snapshot.entity';
-import { uuidv7 } from 'uuidv7';
 
 /**
  * Insert mock balance data for testing API 4 (Risk/Liability)
@@ -97,7 +96,7 @@ async function insertMockBalanceData() {
       // Create ledger snapshot
       const snapshot = snapshotRepo.create({
         userId: user.userId,
-        ledgerSeq: uuidv7(),
+        ledgerSeq: String(i + 1),
         balanceAfter: {
           free: user.free,
           locked: user.locked,
