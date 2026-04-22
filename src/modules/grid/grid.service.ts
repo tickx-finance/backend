@@ -4,6 +4,7 @@ import { Cell, signCell } from 'src/libs/cell';
 import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 import { env } from 'src/config';
 import { normalizePrice } from 'src/libs/market.config';
+import { gridVersionMap } from 'src/libs/grid-cacher';
 
 const TIME_CELL = 5.0 * 1000;
 const PRICE_CELL = 25.0;
@@ -29,7 +30,6 @@ const MODEL_PARAMS = {
   m: 13.869637195218683,
 };
 
-const gridVersionMap: Record<string, Record<string, Record<string, Cell>>> = {};
 
 @Injectable()
 export class GridService implements OnModuleInit {
@@ -37,7 +37,7 @@ export class GridService implements OnModuleInit {
     @Inject(EVENT_PUBLISHER)
     private readonly eventPublisher: EventPublisher,
     private readonly priceService: PriceService,
-  ) {}
+  ) { }
 
   onModuleInit() {
     this.startSnapshotLoop();
@@ -62,10 +62,6 @@ export class GridService implements OnModuleInit {
       g * y * y * logTerm +
       h * Math.pow(y, 4) * Math.exp(-x / k)
     );
-  }
-
-  getCell(gridTs: number, startTs: number, lowerPrice: number) {
-    return gridVersionMap[gridTs]?.[startTs]?.[lowerPrice] || null;
   }
 
   private deleteGridVersionLoop() {

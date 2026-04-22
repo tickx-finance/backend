@@ -3,7 +3,6 @@ import { AccountService } from '../account/account.service';
 import { PlaceOrderDto } from './dto/place-order.dto';
 import { OrderStatus } from './types';
 import { TokenBucket } from 'src/libs/token-bucket';
-import { SocketService } from '../socket/socket.service';
 import { EVENT_PUBLISHER, EventPublisher, OrderUpdateMessage } from '../socket/types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
@@ -13,6 +12,7 @@ import { PriceTick } from 'src/libs/price-tick';
 import { defaultMarketConfig, getSettledStartTs } from 'src/libs/market.config';
 import { BigNumber } from 'bignumber.js';
 import { env } from 'src/config';
+import { getCachedCell } from 'src/libs/grid-cacher';
 
 @Injectable()
 export class OrderService implements OnModuleInit {
@@ -113,10 +113,18 @@ export class OrderService implements OnModuleInit {
         }
 
         // b. Cell signature check
-        const expectedSignature = signCell(dto.cell, env.secret.cellSignerKey);
-        if (dto.cell.gridSignature !== expectedSignature) {
-            throw new Error("Invalid cell signature");
+        const cachedCell = getCachedCell(dto.cell.gridTs, dto.cell.startTs, dto.cell.lowerPrice);
+        if (cachedCell) {
+            if (cachedCell.gridSignature !== dto.cell.gridSignature) {
+                throw new Error("Invalid cell signature");
+            }
+        } else {
+            const expectedSignature = signCell(dto.cell, env.secret.cellSignerKey);
+            if (dto.cell.gridSignature !== expectedSignature) {
+                throw new Error("Invalid cell signature");
+            }
         }
+
         // 1. Rate Limit
         let rateLimiter = this.rateLimiters.get(userId);
         if (!rateLimiter) {
