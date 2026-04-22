@@ -342,12 +342,9 @@ export class SettlementService {
     if (!order.settledWin) {
       return '0';
     }
-    // Calculate payout: amount + (amount * rewardRate)
-    const stake = BigInt(order.amount);
-    const rewardRate = BigInt(order.rewardRate);
-    // Assuming rewardRate is in basis points or percentage, adjust as needed
+    // Calculate payout: (amount * rewardRate)
     // For now, treat as direct multiplier
-    const payout = stake + (stake * rewardRate) / BigInt(10000); // Assuming basis points
+    const payout = BigInt(Number(order.amount) * Number(order.rewardRate) * 1000000) / BigInt(1000000); // Assuming basis points
     return payout.toString();
   }
 
