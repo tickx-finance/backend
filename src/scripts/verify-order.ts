@@ -15,7 +15,7 @@ import { ORDER_EVENT_PUBLISHER, OrderEventPublisher } from 'src/modules/order/or
 import { Cell, signCell } from 'src/libs/cell';
 import { env } from 'src/config';
 import { Order } from 'src/modules/order/entities/order.entity';
-import { AccountEventPublisher } from 'src/modules/account/account.events';
+import { ACCOUNT_EVENT_PUBLISHER, AccountEventPublisher } from 'src/modules/account/account.events';
 
 // Mock Socket Service
 class MockEventPublisher implements OrderEventPublisher, AccountEventPublisher {
@@ -46,6 +46,8 @@ async function runVerification() {
         ],
     })
         .overrideProvider(ORDER_EVENT_PUBLISHER)
+        .useValue(mockEventPublisher)
+        .overrideProvider(ACCOUNT_EVENT_PUBLISHER)
         .useValue(mockEventPublisher)
         .compile();
 
@@ -117,21 +119,29 @@ async function runVerification() {
             // User 1 bets 90-110.
             const cell1 = new Cell(targetStartTs, targetStartTs, targetStartTs + defaultMarketConfig.gridXSize, '90', '110', '2', '')
             cell1.gridSignature = signCell(cell1, env.secret.cellSignerKey)
+
+            const p1StartTime = originalDateNow();
             await orderService.placeOrder(user1Id, {
                 amount: '100',
                 marketId,
                 cell: cell1
             });
+            const p1EndTime = originalDateNow();
+            console.log(`User 1 placed order in ${p1EndTime - p1StartTime}ms`);
 
             // User 2: Low Range (Losing)
             // Bets 10-20.
             const cell2 = new Cell(targetStartTs - 20000, targetStartTs - 20000, targetStartTs + defaultMarketConfig.gridXSize, '10', '20', '2', '')
             cell2.gridSignature = signCell(cell2, env.secret.cellSignerKey)
+
+            const p2StartTime = originalDateNow();
             await orderService.placeOrder(user2Id, {
                 amount: '100',
                 marketId,
                 cell: cell2
             });
+            const p2EndTime = originalDateNow();
+            console.log(`User 2 placed order in ${p2EndTime - p2StartTime}ms`);
 
             console.log('Orders placed.');
         } catch (err) {
