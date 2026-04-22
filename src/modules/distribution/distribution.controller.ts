@@ -12,6 +12,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { ethers } from 'ethers';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 
 export interface LpShare {
@@ -106,11 +107,13 @@ export class DistributionController {
     try {
       this.logger.debug('Fetching LP distribution pending batches');
 
-      // Hardcoded response as per spec
+      const randomReceiver = () => ethers.Wallet.createRandom().address;
+
+      // Mocked response as per spec
       const response: DistributionBatchesResponse = {
         batches: [
           {
-            epochId: 1,
+            epochId: Date.now(),
             totalRewards: '10000000000000000000000', // 10,000 tokens
             snapshotBlock: 12345678,
             lpShares: [
@@ -134,18 +137,18 @@ export class DistributionController {
             destinations: [
               {
                 chainSelector: 16015286601757825753, // Ethereum mainnet
-                receiver: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                receiver: randomReceiver(),
                 amount: '6000000000000000000000', // 6,000 tokens
               },
               {
                 chainSelector: 14767482510784806043, // Polygon
-                receiver: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                receiver: randomReceiver(),
                 amount: '4000000000000000000000', // 4,000 tokens
               },
             ],
           },
           {
-            epochId: 2,
+            epochId: Date.now() + 1,
             totalRewards: '8000000000000000000000', // 8,000 tokens
             snapshotBlock: 12345800,
             lpShares: [
@@ -161,7 +164,7 @@ export class DistributionController {
             destinations: [
               {
                 chainSelector: 16015286601757825753,
-                receiver: '0xcccccccccccccccccccccccccccccccccccccccc',
+                receiver: randomReceiver(),
                 amount: '8000000000000000000000',
               },
             ],
