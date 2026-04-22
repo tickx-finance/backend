@@ -7,5 +7,6 @@ import { SocketModule } from '../socket/socket.module';
   imports: [SocketModule],
   controllers: [PriceController],
   providers: [PriceService],
+  exports: [PriceService],
 })
 export class PriceModule {}

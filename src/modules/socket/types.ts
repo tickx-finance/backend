@@ -24,7 +24,6 @@ export enum SocketChannel {
 }
 
 export enum EventName {
-    SubscribeGrid = 'subscribe_grid',
     UnsubscribeGrid = 'unsubscribe_grid',
     SubscribeUser = 'subscribe_user',
     UnsubscribeUser = 'unsubscribe_user',
@@ -37,13 +36,6 @@ export enum EventName {
     WithdrawCancelled = 'withdraw_cancelled',
     WithdrawSuccess = 'withdraw_success',
     PriceNow = 'price_now',
-}
-
-export interface GridUpdateMessage {
-    marketId: string;
-    price: string;
-    grid: any;
-    timestamp: number;
 }
 
 export interface BalanceUpdateMessage {
@@ -124,6 +116,7 @@ export interface EventPublisher {
     emitOrderUpdate(msg: OrderUpdateMessage): Promise<void>;
     emitBalanceUpdate(msg: BalanceUpdateMessage): Promise<void>;
     emitNewPrice(price: LatestPriceState): Promise<void>;
+    emitGridUpdate(grid: Cell[]): Promise<void>;
 }
 
 export const EVENT_PUBLISHER = Symbol('EVENT_PUBLISHER');

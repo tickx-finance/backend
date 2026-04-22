@@ -8,7 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
-import { EventName, getGridRoom, getUserRoom, PlaceOrderPayload, SubscribeUserPayload } from './types';
+import { EventName, getUserRoom, PlaceOrderPayload, SubscribeUserPayload } from './types';
 import { AuthService } from '../auth/auth.service';
 import { OrderService } from '../order/order.service';
 import { getCellId } from 'src/libs/cell';
@@ -28,16 +28,6 @@ export class SocketGateway {
 
   }
   @WebSocketServer() server: Server;
-
-  @SubscribeMessage(EventName.SubscribeGrid)
-  handleSubscribeGrid(@ConnectedSocket() client: Socket) {
-    const room = getGridRoom();
-    client.join(room)
-
-    client.emit('subscribed', { room, status: 'success' });
-
-    this.logger.log(`User ${client.id} joined ${room}`);
-  }
 
   @SubscribeMessage(EventName.SubscribeUser)
   handleSubscribeUser(@ConnectedSocket() client: Socket, @MessageBody() payload: SubscribeUserPayload) {

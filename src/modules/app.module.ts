@@ -13,6 +13,7 @@ import { OrderModule } from './order/order.module';
 import { PaymentModule } from './payment/payment.module';
 import { PriceModule } from './price/price.module';
 import { SocketModule } from './socket/socket.module';
+import { GridModule } from './grid/grid.module';
 
 @Module({
     imports: [
@@ -31,6 +32,7 @@ import { SocketModule } from './socket/socket.module';
         OrderModule,
         PaymentModule,
         PriceModule,
+        GridModule,
     ],
 })
 export class AppModule implements OnModuleInit {

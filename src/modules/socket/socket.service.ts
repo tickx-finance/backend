@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { LatestPriceState } from 'src/libs/price-tick';
-import { BalanceUpdateMessage, DepositSuccessMessage, EventName, EventPublisher, getGridRoom, getUserRoom, GridUpdateMessage, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from './types';
+import { BalanceUpdateMessage, DepositSuccessMessage, EventName, EventPublisher, getGridRoom, getUserRoom, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from './types';
+import { Cell } from 'src/libs/cell';
 
 @Injectable()
 @WebSocketGateway({
@@ -14,9 +15,8 @@ export class SocketService implements EventPublisher {
     @WebSocketServer() server: Server;
     constructor() { }
 
-    async emitGridUpdate(msg: GridUpdateMessage) {
+    async emitGridUpdate(msg: Cell[]) {
         this.server
-            .to(getGridRoom())
             .emit(EventName.GridUpdate, msg);
     }
 

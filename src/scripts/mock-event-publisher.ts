@@ -1,6 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 import { BalanceUpdateMessage, DepositSuccessMessage, EVENT_PUBLISHER, EventPublisher, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from "../modules/socket/types";
 import { LatestPriceState } from "src/libs/price-tick";
+import { Cell } from "src/libs/cell";
 
 export class MockEventPublisher implements EventPublisher {
     async emitDepositSuccess(msg: DepositSuccessMessage): Promise<void> {
@@ -23,6 +24,9 @@ export class MockEventPublisher implements EventPublisher {
     }
     async emitNewPrice(price: LatestPriceState): Promise<void> {
         console.log('[MockEventPublisher] emitNewPrice', JSON.stringify(price));
+    }
+    async emitGridUpdate(grid: Cell[]): Promise<void> {
+        console.log('[MockEventPublisher] emitGridUpdate', JSON.stringify(grid));
     }
 }
 @Module({
