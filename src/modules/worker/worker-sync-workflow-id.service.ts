@@ -30,6 +30,7 @@ import {
 
 // Default starting block number - should be set to deployment block of contracts
 const DEFAULT_START_BLOCK = 10346859;
+const MAX_RPC_BLOCK_RANGE = 500;
 
 @Injectable()
 export class WorkerServiceSyncWorkflowId implements OnModuleInit {
@@ -99,7 +100,7 @@ export class WorkerServiceSyncWorkflowId implements OnModuleInit {
       const toBlockNumber = RedisCheckpoint.calculateToBlock(
         blockNumberNow,
         fromBlockNumber,
-        500, // Max 500 blocks per query
+        MAX_RPC_BLOCK_RANGE - 1, // Max 500 blocks per query (inclusive range)
       );
 
       // 3. SYNC IF THERE ARE NEW BLOCKS
@@ -107,6 +108,12 @@ export class WorkerServiceSyncWorkflowId implements OnModuleInit {
         await this.syncEventsInRange(fromBlockNumber, toBlockNumber);
       }
     } catch (err) {
+      const earliestAvailableBlock = this.extractEarliestAvailableBlock(err);
+      if (earliestAvailableBlock !== null) {
+        await this.recoverFromPrunedHistory(earliestAvailableBlock);
+        return;
+      }
+
       createNewLog(
         this.logger,
         'job',
@@ -125,17 +132,78 @@ export class WorkerServiceSyncWorkflowId implements OnModuleInit {
   }
 
   /**
+   * Extract "earliest available block" from RPC error message.
+   * Example: requested fromBlock X is before earliest available block Y
+   */
+  private extractEarliestAvailableBlock(error: unknown): number | null {
+    const message = (error as { message?: string })?.message;
+    if (!message) return null;
+
+    const match = message.match(/earliest available block (\d+)/i);
+    if (!match) return null;
+
+    const blockNumber = Number.parseInt(match[1], 10);
+    return Number.isFinite(blockNumber) ? blockNumber : null;
+  }
+
+  /**
+   * Move checkpoint to the earliest block the RPC node can serve.
+   * This prevents the cron job from failing forever on pruned-history providers.
+   */
+  private async recoverFromPrunedHistory(
+    earliestAvailableBlock: number,
+  ): Promise<void> {
+    const currentCheckpoint = await RedisCheckpoint.getCheckPoint(
+      this.redis,
+      RedisKey.workflow_id_updated_block_number,
+    );
+
+    if (
+      currentCheckpoint === null ||
+      currentCheckpoint < earliestAvailableBlock
+    ) {
+      await RedisCheckpoint.setCheckPoint(
+        this.redis,
+        RedisKey.workflow_id_updated_block_number,
+        earliestAvailableBlock,
+      );
+
+      this.logger.warn(
+        `RPC node does not serve old logs. Checkpoint moved from ${
+          currentCheckpoint ?? 'null'
+        } to ${earliestAvailableBlock}`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `RPC node earliest available block is ${earliestAvailableBlock}, current checkpoint ${currentCheckpoint} is already within range`,
+    );
+  }
+
+  /**
    * Sync events in a range and update checkpoint
    */
   async syncEventsInRange(fromBlockNumber: number, toBlockNumber: number) {
+    const safeToBlockNumber = Math.min(
+      toBlockNumber,
+      fromBlockNumber + MAX_RPC_BLOCK_RANGE - 1,
+    );
+
+    if (safeToBlockNumber !== toBlockNumber) {
+      this.logger.warn(
+        `Requested CRE sync range ${fromBlockNumber}-${toBlockNumber} exceeds ${MAX_RPC_BLOCK_RANGE} blocks, clamped to ${fromBlockNumber}-${safeToBlockNumber}`,
+      );
+    }
+
     this.logger.log(
-      `Syncing CRE events from block ${fromBlockNumber} to ${toBlockNumber}`,
+      `Syncing CRE events from block ${fromBlockNumber} to ${safeToBlockNumber}`,
     );
 
     // Crawl events from adapter
     const eventsResponse = await workflowIdAdapter.crawlEvents(
       fromBlockNumber,
-      toBlockNumber,
+      safeToBlockNumber,
     );
 
     console.log(eventsResponse);
@@ -168,7 +236,7 @@ export class WorkerServiceSyncWorkflowId implements OnModuleInit {
     await RedisCheckpoint.setCheckPoint(
       this.redis,
       RedisKey.workflow_id_updated_block_number,
-      toBlockNumber + 1, // +1 to avoid re-syncing the last block
+      safeToBlockNumber + 1, // +1 to avoid re-syncing the last block
     );
 
     const totalEvents =
