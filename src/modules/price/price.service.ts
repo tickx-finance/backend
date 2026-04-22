@@ -16,6 +16,12 @@ import { OhlcService } from './ohlc.service';
 @Injectable()
 export class PriceService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PriceService.name);
+  private readonly WS_URL = 'wss://fstream.binance.com/ws/btcusdt@aggTrade';
+  private readonly WS_STALE_AFTER_MS = 15_000;
+  private readonly WS_HEALTHCHECK_INTERVAL_MS = 5_000;
+  private readonly WS_RECONNECT_BASE_DELAY_MS = 1_000;
+  private readonly WS_RECONNECT_MAX_DELAY_MS = 30_000;
+
   constructor(
     @Inject(EVENT_PUBLISHER)
     private readonly eventPublisher: EventPublisher,
@@ -38,37 +44,76 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
   // ========================
   private ws?: WebSocket;
   private reconnectTimer?: NodeJS.Timeout;
-
-  private readonly WS_URL = 'wss://fstream.binance.com/ws/btcusdt@aggTrade';
+  private heartbeatTimer?: NodeJS.Timeout;
+  private snapshotTimer?: NodeJS.Timeout;
+  private isShuttingDown = false;
+  private lastMessageAt?: number;
+  private lastConnectAttemptAt?: number;
+  private lastDisconnectAt?: number;
+  private reconnectAttempts = 0;
 
   // ========================
   // Lifecycle
   // ========================
   onModuleInit() {
-    if (env.flag.runPriceTick) {
-      this.connectWS();
-      this.startSnapshotLoop();
-    }
+    if (!env.flag.runPriceTick) return;
+
+    this.connectWS();
+    this.startSnapshotLoop();
+    this.startHealthCheckLoop();
   }
 
   onModuleDestroy() {
-    this.ws?.close();
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.isShuttingDown = true;
+    this.clearReconnectTimer();
+
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    if (this.snapshotTimer) clearInterval(this.snapshotTimer);
+
+    this.disconnectWS();
   }
 
   // ========================
   // Connect Binance WS
   // ========================
   private connectWS() {
-    this.logger.log('Connecting to Binance aggTrade WS...');
-    this.ws = new WebSocket(this.WS_URL);
+    if (this.isShuttingDown) return;
+    if (
+      this.ws &&
+      (this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
+    }
 
-    this.ws.on('open', () => {
+    this.disconnectWS();
+    this.clearReconnectTimer();
+    this.lastConnectAttemptAt = Date.now();
+
+    this.logger.log('Connecting to Binance aggTrade WS...');
+    const socket = new WebSocket(this.WS_URL);
+    this.ws = socket;
+
+    socket.on('open', () => {
+      if (this.ws !== socket) return;
+
+      this.reconnectAttempts = 0;
+      this.lastMessageAt = Date.now();
       this.logger.log('✅ Binance aggTrade WS connected');
     });
 
-    this.ws.on('message', (data) => {
-      const msg = JSON.parse(data.toString()) as AggTradePayload;
+    socket.on('message', (data) => {
+      if (this.ws !== socket) return;
+
+      let msg: AggTradePayload;
+      try {
+        msg = JSON.parse(data.toString()) as AggTradePayload;
+      } catch (error) {
+        this.logger.warn(`Failed to parse Binance WS payload: ${String(error)}`);
+        return;
+      }
+
+      this.lastMessageAt = Date.now();
 
       // drop outdated trade
       if (this.latestTrade && msg.a <= this.latestTrade.tradeId) return;
@@ -82,31 +127,122 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
       };
     });
 
-    this.ws.on('close', () => {
-      this.logger.warn('❌ WS closed – reconnecting...');
-      this.scheduleReconnect();
+    socket.on('close', (code, reason) => {
+      if (this.ws !== socket) return;
+
+      this.ws = undefined;
+      this.lastDisconnectAt = Date.now();
+
+      const reasonText = reason.toString() || 'no reason';
+      this.logger.warn(
+        `❌ Binance aggTrade WS closed (code=${code}, reason=${reasonText})`,
+      );
+      this.scheduleReconnect('socket closed');
     });
 
-    this.ws.on('error', (err) => {
-      this.logger.error('WS error', err);
-      this.ws?.close();
+    socket.on('error', (err) => {
+      if (this.ws !== socket) return;
+
+      this.logger.error(
+        `Binance aggTrade WS error: ${err.message}`,
+        err.stack,
+      );
+      this.forceReconnect('socket error');
     });
   }
 
-  private scheduleReconnect() {
-    if (this.reconnectTimer) return;
+  private disconnectWS() {
+    const socket = this.ws;
+    if (!socket) return;
+
+    this.ws = undefined;
+    this.lastDisconnectAt = Date.now();
+    socket.removeAllListeners();
+
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.close();
+      socket.terminate();
+      return;
+    }
+
+    if (
+      socket.readyState === WebSocket.CONNECTING ||
+      socket.readyState === WebSocket.CLOSING
+    ) {
+      socket.terminate();
+    }
+  }
+
+  private forceReconnect(reason: string) {
+    if (this.isShuttingDown) return;
+
+    this.logger.warn(`Forcing Binance aggTrade WS reconnect: ${reason}`);
+    this.disconnectWS();
+    this.scheduleReconnect(reason);
+  }
+
+  private scheduleReconnect(reason: string) {
+    if (this.isShuttingDown || this.reconnectTimer) return;
+
+    const delay = Math.min(
+      this.WS_RECONNECT_BASE_DELAY_MS * 2 ** this.reconnectAttempts,
+      this.WS_RECONNECT_MAX_DELAY_MS,
+    );
+    this.reconnectAttempts += 1;
+
+    this.logger.warn(
+      `Reconnecting Binance aggTrade WS in ${delay}ms (${reason})`,
+    );
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = undefined;
       this.connectWS();
-    }, 1000);
+    }, delay);
+  }
+
+  private clearReconnectTimer() {
+    if (!this.reconnectTimer) return;
+
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
+  }
+
+  private startHealthCheckLoop() {
+    this.heartbeatTimer = setInterval(() => {
+      if (this.isShuttingDown || this.reconnectTimer) return;
+
+      const now = Date.now();
+      const socket = this.ws;
+
+      if (!socket || socket.readyState === WebSocket.CLOSED) {
+        this.scheduleReconnect('socket not connected');
+        return;
+      }
+
+      if (
+        socket.readyState === WebSocket.CONNECTING &&
+        this.lastConnectAttemptAt &&
+        now - this.lastConnectAttemptAt > this.WS_STALE_AFTER_MS
+      ) {
+        this.forceReconnect('connect timeout');
+        return;
+      }
+
+      if (
+        socket.readyState === WebSocket.OPEN &&
+        this.lastMessageAt &&
+        now - this.lastMessageAt > this.WS_STALE_AFTER_MS
+      ) {
+        this.forceReconnect(`no trade received for ${now - this.lastMessageAt}ms`);
+      }
+    }, this.WS_HEALTHCHECK_INTERVAL_MS);
   }
 
   // ========================
   // Snapshot loop (ANTI LAG)
   // ========================
   private startSnapshotLoop() {
-    setInterval(() => {
+    this.snapshotTimer = setInterval(() => {
       if (!this.latestTrade) return;
 
       // const { price, qty, isSell } = this.latestTrade;
@@ -131,5 +267,32 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
 
   getLatestTradePrice(): number | null {
     return this.latestTrade?.price ?? null;
+  }
+
+  getStreamHealth() {
+    const now = Date.now();
+    const readyState = this.ws
+      ? ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'][this.ws.readyState] ?? 'UNKNOWN'
+      : 'CLOSED';
+    const lastMessageAgeMs = this.lastMessageAt ? now - this.lastMessageAt : null;
+    const healthy =
+      !env.flag.runPriceTick ||
+      (this.ws?.readyState === WebSocket.OPEN &&
+        lastMessageAgeMs !== null &&
+        lastMessageAgeMs <= this.WS_STALE_AFTER_MS);
+
+    return {
+      enabled: env.flag.runPriceTick,
+      healthy,
+      readyState,
+      reconnectScheduled: Boolean(this.reconnectTimer),
+      reconnectAttempts: this.reconnectAttempts,
+      lastMessageAt: this.lastMessageAt ?? null,
+      lastMessageAgeMs,
+      lastConnectAttemptAt: this.lastConnectAttemptAt ?? null,
+      lastDisconnectAt: this.lastDisconnectAt ?? null,
+      staleAfterMs: this.WS_STALE_AFTER_MS,
+      latestTradeTs: this.latestTrade?.ts ?? null,
+    };
   }
 }
