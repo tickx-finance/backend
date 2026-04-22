@@ -19,7 +19,7 @@ export class OrderService implements OnModuleInit {
 
     // In-memory state
     // public for testing/inspection
-    private userCellIndex = new Map<string, Set<string>>(); // userId -> Set<cellId>
+    private userCellIndex = new Map<string, Map<string, boolean>>(); // userId -> Set<cellId>
     private activeOrdersByBucket = new Map<number, Map<string, Order>>(); // timeBucket -> Map<orderId, ActiveOrder>
 
     private rateLimiters = new Map<string, TokenBucket>();
@@ -59,13 +59,13 @@ export class OrderService implements OnModuleInit {
         return bucketMap;
     }
     buildUserCellIndex(activeOrders: Order[]) {
-        const userCellIndex = new Map<string, Set<string>>();
+        const userCellIndex = new Map<string, Map<string, boolean>>();
         for (const order of activeOrders) {
             const userCells = userCellIndex.get(order.userId);
             if (!userCells) {
-                userCellIndex.set(order.userId, new Set());
+                userCellIndex.set(order.userId, new Map());
             }
-            userCellIndex.get(order.userId)!.add(getCellId(buildCellFromOrder(order)));
+            userCellIndex.get(order.userId)!.set(getCellId(buildCellFromOrder(order)), true);
         }
         return userCellIndex;
     }
@@ -133,10 +133,10 @@ export class OrderService implements OnModuleInit {
         }
 
         const cellId = getCellId(dto.cell);
-        this.logger.debug(`Placing order for cell ${cellId}`);
+        // this.logger.debug(`Placing order for cell ${cellId}`);
         // 2. Duplicate Check
         const userCells = this.userCellIndex.get(userId);
-        if (userCells && userCells.has(cellId)) {
+        if (userCells && userCells.get(cellId)) {
             throw new Error('Duplicate order for this cell');
         }
 
@@ -144,12 +144,13 @@ export class OrderService implements OnModuleInit {
         // This will throw if insufficient balance
         await this.accountService.placeBet(userId, dto.amount, dto.marketId, cellId);
 
+
         // 4. Create Active Order
         // Design: OrderID = hash(user_id + CellID)
         // For simplicity/uniqueness in JS, we can use `${userId}:${dto.cellId}` as the ID or hash it.
         const orderId = `${userId}:${cellId}`;
 
-        // 6. Fanout ws
+        // 6. Optimistic Fanout ws
         const wsMsg: OrderUpdateMessage = {
             orderId,
             userId,
@@ -180,9 +181,9 @@ export class OrderService implements OnModuleInit {
 
         // 5. Update In-mem Active Orders
         if (!this.userCellIndex.has(userId)) {
-            this.userCellIndex.set(userId, new Set());
+            this.userCellIndex.set(userId, new Map());
         }
-        this.userCellIndex.get(userId).add(cellId);
+        this.userCellIndex.get(userId).set(cellId, true);
 
         // Bucket storage
         let bucket = this.activeOrdersByBucket.get(dto.cell.startTs);

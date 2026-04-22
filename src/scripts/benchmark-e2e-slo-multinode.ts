@@ -15,7 +15,8 @@ const DATA_WSS_URL = process.env.DATA_WSS_URL || 'http://localhost:5001'; // Sou
 const NODES_CONFIG = process.env.NODES ? JSON.parse(process.env.NODES) : [
     { api: 'http://localhost:5002/api', ws: 'http://localhost:5002' },
     // Add more nodes here or via env var
-    { api: 'http://localhost:5003/api', ws: 'http://localhost:5003' }
+    { api: 'http://localhost:5003/api', ws: 'http://localhost:5003' },
+    { api: 'http://localhost:5003/api', ws: 'http://localhost:5004' }
 ];
 
 const TIMEOUT_MS = 30000;
@@ -45,24 +46,21 @@ interface User {
     wssKey?: string;
     socket?: Socket;
     nodeIndex: number;
-    orders: OrderTiming[]; // Track M orders
+    orders: Record<string, OrderTiming>; // Track M orders
     completedOrdersCount: number;
 }
 
 let currentGrid: Cell[] = [];
 let currentPrice: number = 0;
 
-function getAssignedNode(address: string) {
-    // Simple sharding based on first byte of address
-    const byte = parseInt(address.slice(2, 4), 16);
-    const index = byte % NODES_CONFIG.length;
-    return { index, config: NODES_CONFIG[index] };
+function getAssignedNode(index: number) {
+    return { index, config: NODES_CONFIG[index % NODES_CONFIG.length] };
 }
 
 async function setupUser(index: number): Promise<User> {
     const wallet = ethers.Wallet.createRandom();
     const address = wallet.address;
-    const { index: nodeIndex, config: nodeConfig } = getAssignedNode(address);
+    const { index: nodeIndex, config: nodeConfig } = getAssignedNode(index);
     const API_URL = nodeConfig.api;
     const WSS_URL = nodeConfig.ws;
 
@@ -71,7 +69,7 @@ async function setupUser(index: number): Promise<User> {
         wallet,
         address,
         nodeIndex,
-        orders: [],
+        orders: {},
         completedOrdersCount: 0
     };
 
@@ -207,7 +205,7 @@ async function run() {
                 const cellId = getCellId(data.cell);
 
                 // Find order record for this user that matches this cell and has no end time
-                const orderRecord = u.orders.find(o => o.cellId === cellId && !o.success);
+                const orderRecord = u.orders[cellId];
 
                 if (orderRecord) {
                     orderRecord.end = Date.now();
@@ -225,6 +223,7 @@ async function run() {
     console.log('\n--- Benchmark Phase: Concurrent Bet Placement ---');
     console.log('Sending requests...');
 
+    const socketCalls: {socket: Socket, payload: any}[] = []
     users.forEach(u => {
         targetCells.forEach(cell => {
             const cellId = getCellId(cell);
@@ -246,11 +245,15 @@ async function run() {
                 cellId: cellId,
                 success: false
             };
-            u.orders.push(orderTiming);
+            u.orders[cellId] = orderTiming;
 
-            u.socket!.emit('place_bet', payload);
+            socketCalls.push({socket: u.socket!, payload})
+
+            // u.socket!.emit('place_bet', payload);
         });
     });
+
+    socketCalls.map(({socket, payload}) => socket.emit('place_bet', payload))
 
     // Wait for completion
     const waitStart = Date.now();
@@ -263,7 +266,7 @@ async function run() {
 
     const allDurations: number[] = [];
     users.forEach(u => {
-        u.orders.forEach(o => {
+        Object.values(u.orders).forEach(o => {
             if (o.success && o.duration) {
                 allDurations.push(o.duration);
             }
