@@ -8,6 +8,7 @@ import Redis from 'ioredis';
 import dataSource from 'src/libs/typeorm.config';
 import { HealthCheckModule } from './health-check/health-check.module';
 import { AccountModule } from './account/account.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
     imports: [
@@ -20,7 +21,8 @@ import { AccountModule } from './account/account.module';
             options: {},
         }),
         HealthCheckModule,
-        AccountModule
+        AccountModule,
+        AuthModule
     ],
 })
 export class AppModule implements OnModuleInit {
