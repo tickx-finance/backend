@@ -140,7 +140,15 @@ function placeOrder(socket: Socket, userId: string, wssKey: string) {
 
     // Cell matching logic
 
-    const cell = new Cell(startTs, startTs, startTs + defaultMarketConfig.gridXSize, '90', '110', '2', '')
+    const cell: Cell = {
+        gridTs: startTs,
+        startTs: startTs,
+        endTs: startTs + defaultMarketConfig.gridXSize,
+        lowerPrice: '90',
+        upperPrice: '110',
+        rewardRate: '2',
+        gridSignature: ''
+    }
     cell.gridSignature = signCell(cell, env.secret.cellSignerKey)
 
     // Signature for PlaceBet: HMAC(userId + ...? No)

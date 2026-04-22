@@ -17,24 +17,6 @@ export class Cell {
     rewardRate: string;
     @ApiProperty({ type: String })
     gridSignature: string;
-
-    constructor(
-        gridTs: number,
-        startTs: number,
-        endTs: number,
-        lowerPrice: string,
-        upperPrice: string,
-        rewardRate: string,
-        gridSignature: string,
-    ) {
-        this.gridTs = gridTs;
-        this.startTs = startTs;
-        this.endTs = endTs;
-        this.lowerPrice = lowerPrice;
-        this.upperPrice = upperPrice;
-        this.rewardRate = rewardRate;
-        this.gridSignature = gridSignature;
-    }
 }
 
 export function getCellId(cell: Cell) {
@@ -52,6 +34,14 @@ export function signCell(cell: Cell, privateKey: string): string {
         .digest('hex');
 }
 
-export function buildCellFromOrder(order: Order) {
-    return new Cell(order.placedAt, order.cellTimeStart, order.cellTimeEnd, order.lowerPrice, order.upperPrice, order.rewardRate, '')
+export function buildCellFromOrder(order: Order): Cell {
+    return {
+        gridTs: order.placedAt,
+        startTs: order.cellTimeStart,
+        endTs: order.cellTimeEnd,
+        lowerPrice: order.lowerPrice,
+        upperPrice: order.upperPrice,
+        rewardRate: order.rewardRate,
+        gridSignature: ''
+    }
 }

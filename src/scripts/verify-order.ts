@@ -110,7 +110,15 @@ async function runVerification() {
             // User 1: High Range (Winning)
             // Assume Price will be 100.
             // User 1 bets 90-110.
-            const cell1 = new Cell(targetStartTs, targetStartTs, targetStartTs + defaultMarketConfig.gridXSize, '90', '110', '2', '')
+            const cell1: Cell = {
+                gridTs: targetStartTs,
+                startTs: targetStartTs,
+                endTs: targetStartTs + defaultMarketConfig.gridXSize,
+                lowerPrice: '90',
+                upperPrice: '110',
+                rewardRate: '2',
+                gridSignature: ''
+            }
             cell1.gridSignature = signCell(cell1, env.secret.cellSignerKey)
 
             const p1StartTime = originalDateNow();
@@ -124,7 +132,15 @@ async function runVerification() {
 
             // User 2: Low Range (Losing)
             // Bets 10-20.
-            const cell2 = new Cell(targetStartTs - 20000, targetStartTs - 20000, targetStartTs + defaultMarketConfig.gridXSize, '10', '20', '2', '')
+            const cell2: Cell = {
+                gridTs: targetStartTs - 20000,
+                startTs: targetStartTs - 20000,
+                endTs: targetStartTs + defaultMarketConfig.gridXSize,
+                lowerPrice: '10',
+                upperPrice: '20',
+                rewardRate: '2',
+                gridSignature: ''
+            }
             cell2.gridSignature = signCell(cell2, env.secret.cellSignerKey)
 
             const p2StartTime = originalDateNow();
