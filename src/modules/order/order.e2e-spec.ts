@@ -122,7 +122,7 @@ describe('OrderModule integration', () => {
             startTs,
             lowerPrice: '90',
             upperPrice: '110',
-            rewardRate: '2',
+            rewardRate: '1.956000',
         });
         const losingCell = signedCell({
             startTs,
@@ -153,7 +153,7 @@ describe('OrderModule integration', () => {
         };
         await orderService.handleSinglePriceTick(winningTick);
 
-        await expectBalance(user1Id, { free: '1100', locked: '0' });
+        await expectBalance(user1Id, { free: '1095.6', locked: '0' });
         await expectBalance(user2Id, { free: '900', locked: '100' });
 
         const expiredTick: PriceTick = {

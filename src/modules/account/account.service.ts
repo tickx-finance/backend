@@ -138,10 +138,10 @@ export class AccountService {
 
         let delta: BalanceDelta;
         if (win) {
-            const payout = betAmount.times(rewardRate);
+            const payout = betAmount.times(rewardRate).decimalPlaces(9, BigNumber.ROUND_DOWN);
             delta = {
                 locked: betAmount.negated().toString(),
-                free: payout.toString(),
+                free: payout.toFixed(),
                 freeTap: '0',
             };
         } else {

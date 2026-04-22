@@ -9,6 +9,8 @@ export interface AtomicBalanceMutation {
 }
 
 const ATOMIC_APPLY_BALANCE_DELTA_SCRIPT = `
+local SCALE = 9
+
 local function normalize(n)
   n = tostring(n)
   local sign = ''
@@ -109,11 +111,64 @@ local function add_signed(a, b)
   return diff
 end
 
+local function decimal_to_units(value)
+  value = tostring(value)
+  local sign = ''
+  if string.sub(value, 1, 1) == '-' then
+    sign = '-'
+    value = string.sub(value, 2)
+  end
+
+  local dot = string.find(value, '%.')
+  local whole = value
+  local fractional = ''
+  if dot ~= nil then
+    whole = string.sub(value, 1, dot - 1)
+    fractional = string.sub(value, dot + 1)
+  end
+
+  while string.len(fractional) < SCALE do
+    fractional = fractional .. '0'
+  end
+  if string.len(fractional) > SCALE then
+    fractional = string.sub(fractional, 1, SCALE)
+  end
+
+  local units = normalize(whole .. fractional)
+  if sign == '-' and units ~= '0' then return '-' .. units end
+  return units
+end
+
+local function units_to_decimal(units)
+  units = normalize(units)
+  local sign = ''
+  if string.sub(units, 1, 1) == '-' then
+    sign = '-'
+    units = string.sub(units, 2)
+  end
+
+  while string.len(units) <= SCALE do
+    units = '0' .. units
+  end
+
+  local whole = string.sub(units, 1, string.len(units) - SCALE)
+  local fractional = string.sub(units, string.len(units) - SCALE + 1)
+  whole = string.gsub(whole, '^0+', '')
+  if whole == '' then whole = '0' end
+  fractional = string.gsub(fractional, '0+$', '')
+
+  if fractional == '' then
+    if whole == '0' then return '0' end
+    return sign .. whole
+  end
+  return sign .. whole .. '.' .. fractional
+end
+
 local stateKey = KEYS[1]
 local dedupKey = KEYS[2]
-local freeDelta = ARGV[1]
-local freeTapDelta = ARGV[2]
-local lockedDelta = ARGV[3]
+local freeDelta = decimal_to_units(ARGV[1])
+local freeTapDelta = decimal_to_units(ARGV[2])
+local lockedDelta = decimal_to_units(ARGV[3])
 local initFree = ARGV[4]
 local initFreeTap = ARGV[5]
 local initLocked = ARGV[6]
@@ -138,14 +193,17 @@ local freeTap = redis.call('HGET', stateKey, 'freeTap') or '0'
 local locked = redis.call('HGET', stateKey, 'locked') or '0'
 local ledgerSeq = redis.call('HGET', stateKey, 'ledgerSeq') or '0'
 
-local newFree = add_signed(free, freeDelta)
-local newFreeTap = add_signed(freeTap, freeTapDelta)
-local newLocked = add_signed(locked, lockedDelta)
+local newFreeUnits = add_signed(decimal_to_units(free), freeDelta)
+local newFreeTapUnits = add_signed(decimal_to_units(freeTap), freeTapDelta)
+local newLockedUnits = add_signed(decimal_to_units(locked), lockedDelta)
 
-if is_negative(newFree) or is_negative(newFreeTap) or is_negative(newLocked) then
+if is_negative(newFreeUnits) or is_negative(newFreeTapUnits) or is_negative(newLockedUnits) then
   return {'INSUFFICIENT', free, freeTap, locked, ledgerSeq}
 end
 
+local newFree = units_to_decimal(newFreeUnits)
+local newFreeTap = units_to_decimal(newFreeTapUnits)
+local newLocked = units_to_decimal(newLockedUnits)
 local newLedgerSeq = add_signed(ledgerSeq, '1')
 redis.call('HSET', stateKey, 'free', newFree, 'freeTap', newFreeTap, 'locked', newLocked, 'ledgerSeq', newLedgerSeq)
 redis.call('SET', dedupKey, newLedgerSeq)
@@ -187,7 +245,7 @@ export class RedisBalanceStoreService {
         delta: BalanceDelta,
         initialBalance: BalanceState,
     ): Promise<AtomicBalanceMutation> {
-        this.assertIntegerDelta(delta);
+        this.assertDecimalDelta(delta);
 
         const result = await this.redis.eval(
             ATOMIC_APPLY_BALANCE_DELTA_SCRIPT,
@@ -223,12 +281,16 @@ export class RedisBalanceStoreService {
         return { status, balance };
     }
 
-    private assertIntegerDelta(delta: BalanceDelta) {
+    private assertDecimalDelta(delta: BalanceDelta) {
         for (const value of [delta.free, delta.freeTap, delta.locked]) {
-            if (!/^-?\d+$/.test(value)) {
-                throw new BadRequestException('Balance delta must be an integer base-unit string');
+            if (!this.isDecimalBalance(value)) {
+                throw new BadRequestException('Balance delta must be a decimal string with max 9 fractional digits');
             }
         }
+    }
+
+    private isDecimalBalance(value: string): boolean {
+        return /^-?(?:0|[1-9]\d*)(?:\.\d{1,9})?$/.test(value);
     }
 
     private stateKey(userId: string): string {

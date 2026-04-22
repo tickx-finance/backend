@@ -142,6 +142,27 @@ describe('AccountModule integration', () => {
         expect(entries.map((entry) => entry.ledgerSeq)).toEqual(['1', '2', '3', '4', '5']);
     });
 
+    it('keeps winning decimal reward payouts at 9-digit balance precision', async () => {
+        const userId = 'account-decimal-reward-user';
+
+        await accountService.deposit(userId, '1000', 'decimal-reward-deposit-tx', 1);
+        await accountService.placeBet(userId, '101', 'market-decimal', 'cell-decimal');
+        await accountService.settleBet(userId, '101', true, '1.956000', 'market-decimal', 'cell-decimal');
+
+        await expectBalance(userId, {
+            free: '1096.556',
+            freeTap: '0',
+            locked: '0',
+            lastLedgerSeq: '3',
+        });
+
+        const settlementEntry = await dataSource.getRepository(LedgerEntry).findOneByOrFail({
+            userId,
+            eventType: 'BET_SETTLE',
+        });
+        expect(settlementEntry.deltas.free).toBe('197.556');
+    });
+
     it('deduplicates repeated economic events', async () => {
         const userId = 'account-dedup-user';
 
