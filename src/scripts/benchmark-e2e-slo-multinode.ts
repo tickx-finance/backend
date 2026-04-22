@@ -15,8 +15,8 @@ const DATA_WSS_URL = process.env.DATA_WSS_URL || 'http://localhost:5001'; // Sou
 const NODES_CONFIG = process.env.NODES ? JSON.parse(process.env.NODES) : [
     { api: 'http://localhost:5002/api', ws: 'http://localhost:5002' },
     // Add more nodes here or via env var
-    { api: 'http://localhost:5003/api', ws: 'http://localhost:5003' },
-    { api: 'http://localhost:5003/api', ws: 'http://localhost:5004' }
+    // { api: 'http://localhost:5003/api', ws: 'http://localhost:5003' },
+    // { api: 'http://localhost:5003/api', ws: 'http://localhost:5004' }
 ];
 
 const TIMEOUT_MS = 30000;
@@ -223,7 +223,7 @@ async function run() {
     console.log('\n--- Benchmark Phase: Concurrent Bet Placement ---');
     console.log('Sending requests...');
 
-    const socketCalls: {socket: Socket, payload: any}[] = []
+    const socketCalls: { socket: Socket, payload: any }[] = []
     users.forEach(u => {
         targetCells.forEach(cell => {
             const cellId = getCellId(cell);
@@ -247,13 +247,13 @@ async function run() {
             };
             u.orders[cellId] = orderTiming;
 
-            socketCalls.push({socket: u.socket!, payload})
+            socketCalls.push({ socket: u.socket!, payload })
 
             // u.socket!.emit('place_bet', payload);
         });
     });
 
-    socketCalls.map(({socket, payload}) => socket.emit('place_bet', payload))
+    socketCalls.map(({ socket, payload }) => socket.emit('place_bet', payload))
 
     // Wait for completion
     const waitStart = Date.now();
@@ -301,20 +301,38 @@ async function run() {
     console.log(`P95: ${p95_val}ms`);
     console.log(`P99: ${p99_val}ms`);
 
-    // Output CSV
+    // Output Markdown
     const timestamp = new Date().toISOString();
-    const csvHeader = 'Timestamp,N,M,Nodes,Min,Max,Avg,P95,P99,Total,Successful\n';
-    const csvRow = `${timestamp},${NUM_USERS},${ORDERS_PER_USER},${NODES_CONFIG.length},${min},${max},${avg.toFixed(2)},${p95_val},${p99_val},${totalExpectedOrders},${allDurations.length}\n`;
+    const mdContent = `
+# Benchmark Results - Multi-Node
+
+*   **Timestamp:** ${timestamp}
+*   **Users (N):** ${NUM_USERS}
+*   **Orders/User (M):** ${ORDERS_PER_USER}
+*   **Nodes:** ${NODES_CONFIG.length}
+
+## Metrics
+
+| Metric | Value |
+| :--- | :--- |
+| **Total Orders** | ${totalExpectedOrders} |
+| **Successful** | ${allDurations.length} |
+| **Min Latency** | ${min} ms |
+| **Max Latency** | ${max} ms |
+| **Avg Latency** | ${avg.toFixed(2)} ms |
+| **P95 Latency** | ${p95_val} ms |
+| **P99 Latency** | ${p99_val} ms |
+`;
 
     const resultsDir = path.join(__dirname, '../../benchmark-results');
     if (!fs.existsSync(resultsDir)) {
         fs.mkdirSync(resultsDir, { recursive: true });
     }
 
-    const filename = `multinode-slo-${Date.now()}.csv`;
+    const filename = `multinode-slo-${Date.now()}.md`;
     const filePath = path.join(resultsDir, filename);
 
-    fs.writeFileSync(filePath, csvHeader + csvRow);
+    fs.writeFileSync(filePath, mdContent.trim());
     console.log(`\nResults written to benchmark-results/${filename}`);
 }
 

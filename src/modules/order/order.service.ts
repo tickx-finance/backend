@@ -140,11 +140,6 @@ export class OrderService implements OnModuleInit {
             throw new Error('Duplicate order for this cell');
         }
 
-        // 3. Call Account Service
-        // This will throw if insufficient balance
-        await this.accountService.placeBet(userId, dto.amount, dto.marketId, cellId);
-
-
         // 4. Create Active Order
         // Design: OrderID = hash(user_id + CellID)
         // For simplicity/uniqueness in JS, we can use `${userId}:${dto.cellId}` as the ID or hash it.
@@ -160,11 +155,6 @@ export class OrderService implements OnModuleInit {
         }
         await this.events.emitOrderUpdate(wsMsg)
 
-        // TODO: We need cellTimeEnd to bucket correctly. 
-        // For now, receiving it in DTO or defaulting.
-        // Let's assume the client passes it or we fetch it. 
-        // Updating DTO to include it is safest for now without a GridService.
-
         const order: Order = {
             orderId,
             userId,
@@ -179,7 +169,8 @@ export class OrderService implements OnModuleInit {
             status: OrderStatus.OPEN,
         };
 
-        // 5. Update In-mem Active Orders
+        // 5. Update In-mem Active Orders (Optimistic Lock)
+        // Crucial: Must update BEFORE placeBet to prevent double-spending in race conditions
         if (!this.userCellIndex.has(userId)) {
             this.userCellIndex.set(userId, new Map());
         }
@@ -193,12 +184,31 @@ export class OrderService implements OnModuleInit {
         }
         bucket.set(orderId, order);
 
-        this.logger.log(`Order placed: ${orderId}`);
+        // 3. Call Account Service
+        // This will throw if insufficient balance
+        try {
+            await this.accountService.placeBet(userId, dto.amount, dto.marketId, cellId);
 
-        // 7. Save to DB
-        const dbRecord = this.orderRepository.create(order);
-        await this.orderRepository.save(dbRecord);
-        return order;
+            this.logger.log(`Order placed: ${orderId}`);
+
+            // 7. Save to DB
+            const dbRecord = this.orderRepository.create(order);
+            await this.orderRepository.save(dbRecord);
+            return order;
+        } catch (error) {
+            // Rollback optimistic updates on failure
+            this.userCellIndex.get(userId)?.delete(cellId);
+            bucket.delete(orderId);
+
+            // Emit rejection event
+            const rejectMsg: OrderUpdateMessage = {
+                ...wsMsg,
+                status: OrderStatus.REJECTED,
+            };
+            await this.events.emitOrderUpdate(rejectMsg);
+
+            throw error;
+        }
     }
 
     async settleOrder(order: Order, settledTs: number, win: boolean): Promise<void> {

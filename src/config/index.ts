@@ -44,7 +44,7 @@ const envVarsSchema = Joi.object()
     CELL_SIGNER_KEY: Joi.string().required(),
 
     RUN_PRICE_TICK: Joi.boolean().required(),
-    RUN_SETTLEMENT: Joi.boolean().default(false),
+    RUN_SETTLEMENT: Joi.boolean().required(),
   })
   .unknown();
 
