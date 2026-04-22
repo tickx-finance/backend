@@ -8,7 +8,7 @@ import { EVENT_PUBLISHER, EventPublisher, OrderUpdateMessage } from '../socket/t
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { Repository } from 'typeorm';
-import { buildCellFromOrder, signCell } from 'src/libs/cell';
+import { buildCellFromOrder, getCellId, signCell } from 'src/libs/cell';
 import { PriceTick } from 'src/libs/price-tick';
 import { defaultMarketConfig, getSettledStartTs } from 'src/libs/market.config';
 import { BigNumber } from 'bignumber.js';
@@ -66,7 +66,7 @@ export class OrderService implements OnModuleInit {
             if (!userCells) {
                 userCellIndex.set(order.userId, new Set());
             }
-            userCellIndex.get(order.userId)!.add(buildCellFromOrder(order).id);
+            userCellIndex.get(order.userId)!.add(getCellId(buildCellFromOrder(order)));
         }
         return userCellIndex;
     }
@@ -133,7 +133,8 @@ export class OrderService implements OnModuleInit {
             throw new Error('Order placement rate limit exceeded');
         }
 
-        const cellId = dto.cell.id;
+        const cellId = getCellId(dto.cell);
+        this.logger.debug(`Placing order for cell ${cellId}`);
         // 2. Duplicate Check
         const userCells = this.userCellIndex.get(userId);
         if (userCells && userCells.has(cellId)) {
@@ -206,7 +207,7 @@ export class OrderService implements OnModuleInit {
         }
 
         const cell = buildCellFromOrder(order);
-        const cellId = cell.id;
+        const cellId = getCellId(cell);
 
         // 1. Call Account Service
         await this.accountService.settleBet(

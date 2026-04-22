@@ -3,9 +3,8 @@ import { io, Socket } from 'socket.io-client';
 import axios from 'axios';
 import { ethers } from 'ethers';
 import * as crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
 import { defaultMarketConfig } from 'src/libs/market.config';
-import { Cell, signCell } from 'src/libs/cell';
+import { Cell, getCellId, signCell } from 'src/libs/cell';
 import { env } from 'src/config';
 
 const API_URL = 'http://localhost:5001/api';
@@ -148,7 +147,7 @@ function placeOrder(socket: Socket, userId: string, wssKey: string) {
     // Backend: message = `${cell.gridTs}:${cell.id}:${amount}`
     // authService.validateWssSignature(userId, message, userSignature, false) -> No challenge
 
-    const message = `${cell.gridTs}:${cell.id}:${amount}`;
+    const message = `${cell.gridTs}:${getCellId(cell)}:${amount}`;
     const hmac = crypto.createHmac('sha256', Buffer.from(wssKey, 'hex'));
     hmac.update(message);
     const signature = hmac.digest('hex');

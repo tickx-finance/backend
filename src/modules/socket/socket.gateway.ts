@@ -11,6 +11,7 @@ import { Logger } from '@nestjs/common';
 import { EventName, getGridRoom, getUserRoom, PlaceOrderPayload, SubscribeUserPayload } from './types';
 import { AuthService } from '../auth/auth.service';
 import { OrderService } from '../order/order.service';
+import { getCellId } from 'src/libs/cell';
 
 @WebSocketGateway({
   cors: {
@@ -58,7 +59,7 @@ export class SocketGateway {
 
   @SubscribeMessage(EventName.PlaceBet)
   async handlePlaceBet(@ConnectedSocket() client: Socket, @MessageBody() payload: PlaceOrderPayload) {
-    const cellId = payload.cell.id;
+    const cellId = getCellId(payload.cell);
     const message = `${payload.cell.gridTs}:${cellId}:${payload.amount}`;
 
     if (this.authService.validateWssSignature(payload.userId, message, payload.userSignature, false)) {

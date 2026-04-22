@@ -35,11 +35,11 @@ export class Cell {
         this.rewardRate = rewardRate;
         this.gridSignature = gridSignature;
     }
-    get id(): string {
-        return `${this.startTs}:${this.endTs}:${this.lowerPrice}:${this.upperPrice}`;
-    }
 }
 
+export function getCellId(cell: Cell) {
+    return `${cell.startTs}:${cell.endTs}:${cell.lowerPrice}:${cell.upperPrice}`;
+}
 export function signCell(cell: Cell, privateKey: string): string {
     // hmac signature (gridTs, startTs, endTs, lowerPrice, upperPrice, rewardRate)
     return crypto.createHmac('sha256', privateKey)
