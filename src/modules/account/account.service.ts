@@ -54,7 +54,7 @@ export class AccountService {
         });
     }
 
-    async withdraw_succeeded(userId: string, amount: string, txHash: string, logIndex: number) {
+    async withdrawSucceeded(userId: string, amount: string, txHash: string, logIndex: number) {
         return this.shardQueue.enqueue(userId, async () => {
             const balance = await this.ensureBalanceLoaded(userId);
 
@@ -73,7 +73,7 @@ export class AccountService {
         });
     }
 
-    async withdraw_requested(userId: string, amount: string, sessionId: string) {
+    async withdrawRequested(userId: string, amount: string, sessionId: string) {
         return this.shardQueue.enqueue(userId, async () => {
             const balance = await this.ensureBalanceLoaded(userId);
 
@@ -92,7 +92,7 @@ export class AccountService {
         });
     }
 
-    async withdraw_cancelled(userId: string, amount: string, sessionId: string) {
+    async withdrawCancelled(userId: string, amount: string, sessionId: string) {
         return this.shardQueue.enqueue(userId, async () => {
             const balance = await this.ensureBalanceLoaded(userId);
 

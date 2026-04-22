@@ -9,6 +9,7 @@ import dataSource from 'src/libs/typeorm.config';
 import { HealthCheckModule } from './health-check/health-check.module';
 import { AccountModule } from './account/account.module';
 import { AuthModule } from './auth/auth.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
     imports: [
@@ -22,7 +23,8 @@ import { AuthModule } from './auth/auth.module';
         }),
         HealthCheckModule,
         AccountModule,
-        AuthModule
+        AuthModule,
+        OrderModule
     ],
 })
 export class AppModule implements OnModuleInit {

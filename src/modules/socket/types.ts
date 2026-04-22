@@ -1,3 +1,6 @@
+import { Cell } from "src/libs/cell";
+import { OrderStatus } from "../order/types";
+
 export enum SocketEvents {
     // Market Data
     GRID_UPDATE = 'grid_update',
@@ -35,7 +38,7 @@ export enum EventName {
 }
 
 export interface GridUpdateMessage {
-    symbol: string;
+    marketId: string;
     price: string;
     grid: any;
     timestamp: number;
@@ -52,11 +55,12 @@ export interface BalanceUpdateMessage {
 export interface OrderUpdateMessage {
     orderId: string;
     userId: string;
-    symbol: string;
+    marketId: string;
     cell: any;
-    placedTimestamp: number;
+
+    status: OrderStatus;
     settledTimestamp?: number;
-    settlementResult?: any;
+    settledWin?: boolean;
 }
 
 export interface DepositSuccessMessage {
@@ -100,9 +104,10 @@ export interface SubscribeUserPayload {
 
 export interface PlaceOrderPayload {
     userId: string;
-    cell: any;
-    placedTimestamp: number;
-    signature: string;
+    marketId: string;
+    amount: string;
+    cell: Cell;
+    userSignature: string;
 }
 
 export function getUserRoom(userId: string): string {

@@ -10,6 +10,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { EventName, getGridRoom, getUserRoom, PlaceOrderPayload, SubscribeUserPayload } from './types';
 import { AuthService } from '../auth/auth.service';
+import { OrderService } from '../order/order.service';
 
 @WebSocketGateway({
   cors: {
@@ -21,6 +22,7 @@ export class SocketGateway {
 
   constructor(
     private readonly authService: AuthService,
+    private readonly orderService: OrderService,
   ) {
 
   }
@@ -55,12 +57,21 @@ export class SocketGateway {
   }
 
   @SubscribeMessage(EventName.PlaceBet)
-  handlePlaceBet(@ConnectedSocket() client: Socket, @MessageBody() payload: PlaceOrderPayload) {
-    const message = payload.userId
-    const signature = payload.signature
+  async handlePlaceBet(@ConnectedSocket() client: Socket, @MessageBody() payload: PlaceOrderPayload) {
+    const cellId = payload.cell.id;
+    const message = `${payload.cell.gridTs}:${cellId}:${payload.amount}`;
 
-    if (this.authService.validateWssSignature(payload.userId, message, signature, false)) {
-      // TODO: implement place bet logic
+    if (this.authService.validateWssSignature(payload.userId, message, payload.userSignature, false)) {
+      try {
+        await this.orderService.placeOrder(payload.userId, {
+          amount: payload.amount,
+          cell: payload.cell,
+          marketId: payload.marketId,
+        });
+      } catch (e) {
+        this.logger.error(`Place bet failed: ${e.message}`);
+        client.send(`Place bet failed: ${e.message}`);
+      }
     } else {
       client.send('Invalid wss signature');
     }
