@@ -9,6 +9,7 @@ import WebSocket from 'ws';
 import { AggTradePayload, LatestPriceState, PriceTick } from 'src/libs/price-tick';
 import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 import { OrderPriceTickChannel } from '../order/price-tick.channel';
+import { env } from 'src/config';
 
 @Injectable()
 export class PriceService implements OnModuleInit, OnModuleDestroy {
@@ -41,8 +42,10 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
   // Lifecycle
   // ========================
   onModuleInit() {
-    this.connectWS();
-    this.startSnapshotLoop();
+    if (env.flag.runPriceTick) {
+      this.connectWS();
+      this.startSnapshotLoop();
+    }
   }
 
   onModuleDestroy() {

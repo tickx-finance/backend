@@ -2,6 +2,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { Logger } from "@nestjs/common";
 import { OrderService } from "./order.service";
 import { OrderPriceTickChannel } from "./price-tick.channel";
+import { env } from "src/config";
 
 @Injectable()
 export class OrderWorker implements OnModuleInit, OnModuleDestroy {
@@ -14,7 +15,9 @@ export class OrderWorker implements OnModuleInit, OnModuleDestroy {
     ) { }
 
     onModuleInit() {
-        void this.run();
+        if (env.flag.runSettlement) {
+            void this.run();
+        }
     }
 
     onModuleDestroy() {

@@ -279,7 +279,7 @@ async function run() {
     // We need new cells for probing or reuse? Reuse might fail duplicate check.
     // Let's find new valid cells for probing.
     const probeCells = currentGrid
-        .filter(cell => cell.startTs > burstEndTime + defaultMarketConfig.gridXSize + 60000) // Far enough future
+        .filter(cell => cell.startTs > burstEndTime + defaultMarketConfig.gridXSize + 10000) // Far enough future
         .sort((a, b) => a.startTs - b.startTs)
         .slice(0, 100); // Pool of cells
 

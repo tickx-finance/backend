@@ -39,7 +39,7 @@ export class GridService implements OnModuleInit {
   ) { }
 
   onModuleInit() {
-    this.startSnapshotLoop();
+    if (env.flag.runPriceTick) this.startSnapshotLoop();
     // this.deleteGridVersionLoop();
   }
 

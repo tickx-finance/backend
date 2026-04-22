@@ -42,6 +42,9 @@ const envVarsSchema = Joi.object()
     ADMIN_PRIVATE_KEY: Joi.string().required(),
 
     CELL_SIGNER_KEY: Joi.string().required(),
+
+    RUN_PRICE_TICK: Joi.boolean().required(),
+    RUN_SETTLEMENT: Joi.boolean().default(false),
   })
   .unknown();
 
@@ -89,6 +92,12 @@ export const env = {
     isRunningKafka:
       envVars.KAFKA_RUNNING_FLAG === true ||
       envVars.KAFKA_RUNNING_FLAG === 'true',
+    runPriceTick:
+      envVars.RUN_PRICE_TICK === true ||
+      envVars.RUN_PRICE_TICK === 'true',
+    runSettlement:
+      envVars.RUN_SETTLEMENT === true ||
+      envVars.RUN_SETTLEMENT === 'true',
   },
   secret: {
     jwtSecret: envVars.JWT_SECRET,
