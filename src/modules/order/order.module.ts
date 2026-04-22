@@ -16,6 +16,6 @@ import { SocketModule } from '../socket/socket.module';
             provide: OrderPriceTickChannel,
             useValue: new OrderPriceTickChannel(),
         },],
-    exports: [OrderService, OrderWorker],
+    exports: [OrderService, OrderWorker, OrderPriceTickChannel],
 })
 export class OrderModule { }
