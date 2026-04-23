@@ -1,10 +1,12 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Cell } from 'src/libs/cell';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class PlaceOrderDto {
     @ApiProperty({ type: Cell })
+    @IsNotEmpty()
+    @ValidateNested()
     @Type(() => Cell)
     cell: Cell;
 

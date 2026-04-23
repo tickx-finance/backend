@@ -117,8 +117,8 @@ export class AuthService {
         // You can convert it to a hex or base64 string for storage or transmission
         const secretKeyHex: string = secretKey.toString('hex');
 
-        // WSS key valid for 2 minutes (short lived for realtime authorization)
-        const ttl = 120;
+        // WSS key valid for 60 minutes (short lived for realtime authorization)
+        const ttl = 3600;
         const normalizedAddress = ethers.getAddress(address);
         const expiresAt = Date.now() + ttl * 1000;
 

@@ -1,21 +1,36 @@
 import * as crypto from 'crypto';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { Order } from 'src/modules/order/entities/order.entity';
 
 export class Cell {
     @ApiProperty({ type: Number })
+    @IsNumber()
+    @IsNotEmpty()
     gridTs: number;
     @ApiProperty({ type: Number })
+    @IsNumber()
+    @IsNotEmpty()
     startTs: number;
     @ApiProperty({ type: Number })
+    @IsNumber()
+    @IsNotEmpty()
     endTs: number;
     @ApiProperty({ type: String })
+    @IsString()
+    @IsNotEmpty()
     lowerPrice: string;
     @ApiProperty({ type: String })
+    @IsString()
+    @IsNotEmpty()
     upperPrice: string;
     @ApiProperty({ type: String })
+    @IsString()
+    @IsNotEmpty()
     rewardRate: string;
     @ApiProperty({ type: String })
+    @IsString()
+    @IsNotEmpty()
     gridSignature: string;
 }
 
