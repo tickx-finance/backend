@@ -8,12 +8,19 @@ import { env } from '../../config';
 import * as crypto from 'crypto';
 import { AuthType } from './entities/user-auth-profile.entity';
 import { AuthJwtPayload } from './types';
+import { UserAuthProfileService } from './user-auth-profile.service';
+import { MiniAppLoginDto } from './dto/miniapp-login.dto';
+import { MiniAppAuthVerifier } from './miniapp-auth.verifier';
 
 @Injectable()
 export class AuthService {
     private readonly wssKeyCache = new Map<string, { key: string, expiresAt: number }>();
 
-    constructor(@InjectRedis() private readonly redis: Redis) { }
+    constructor(
+        @InjectRedis() private readonly redis: Redis,
+        private readonly userAuthProfileService: UserAuthProfileService,
+        private readonly miniAppAuthVerifier: MiniAppAuthVerifier,
+    ) { }
 
     async generateChallenge(address: string): Promise<string> {
         const challenge = `Sign this message to login to Tapl: ${uuidv4()}`;
@@ -42,9 +49,43 @@ export class AuthService {
         // Clean up challenge
         await this.redis.del(`auth:challenge:${normalizedAddress}`);
 
+        const profile = await this.userAuthProfileService.upsert({
+            address: normalizedAddress,
+            lastAuthType: AuthType.WALLET,
+        });
+
         // Generate Credentials
-        const jwtToken = this.generateJwt(normalizedAddress);
+        const jwtToken = this.generateJwt(normalizedAddress, {
+            authType: AuthType.WALLET,
+            humanVerified: profile.humanVerified,
+            miniAppUserId: profile.miniAppUserId,
+        });
         const wssKey = await this.generateWssKey(normalizedAddress);
+
+        return {
+            accessToken: jwtToken,
+            wssKey: wssKey.key,
+            wssKeyExpiresAt: wssKey.expiresAt,
+        };
+    }
+
+    async loginMiniApp(dto: MiniAppLoginDto) {
+        const verified = this.miniAppAuthVerifier.verify(dto);
+        const profile = await this.userAuthProfileService.upsert({
+            address: verified.address,
+            lastAuthType: AuthType.MINIAPP,
+            miniAppUserId: dto.miniAppUserId,
+            humanVerified: verified.humanVerified,
+            humanVerifiedAt: verified.humanVerified ? verified.verifiedAt : null,
+            humanVerificationSource: verified.humanVerified ? verified.verificationSource : null,
+        });
+
+        const jwtToken = this.generateJwt(verified.address, {
+            authType: AuthType.MINIAPP,
+            humanVerified: profile.humanVerified,
+            miniAppUserId: profile.miniAppUserId,
+        });
+        const wssKey = await this.generateWssKey(verified.address);
 
         return {
             accessToken: jwtToken,

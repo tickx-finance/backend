@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { MiniAppLoginDto } from './dto/miniapp-login.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -20,6 +21,12 @@ export class AuthController {
     @ApiOperation({ summary: 'Login with signed challenge' })
     async login(@Body() body: { address: string; signature: string }) {
         return this.authService.login(body.address, body.signature);
+    }
+
+    @Post('miniapp/login')
+    @ApiOperation({ summary: 'Login with Worldchain mini-app payload' })
+    async miniAppLogin(@Body() body: MiniAppLoginDto) {
+        return this.authService.loginMiniApp(body);
     }
 
     @Get('wss-key')

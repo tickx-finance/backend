@@ -4,11 +4,12 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UserAuthProfile } from './entities/user-auth-profile.entity';
 import { UserAuthProfileService } from './user-auth-profile.service';
+import { MiniAppAuthVerifier } from './miniapp-auth.verifier';
 
 @Module({
     imports: [TypeOrmModule.forFeature([UserAuthProfile])],
     controllers: [AuthController],
-    providers: [AuthService, UserAuthProfileService],
+    providers: [AuthService, UserAuthProfileService, MiniAppAuthVerifier],
     exports: [AuthService, UserAuthProfileService],
 })
 export class AuthModule { }

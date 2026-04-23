@@ -250,6 +250,18 @@ Exit criteria:
 
 - Wallet users receive enriched JWT claims without any DB identity migration.
 
+Implementation note:
+
+- `AuthService.login(...)` now upserts `user_auth_profiles` on successful wallet login with:
+  - `address`
+  - `lastAuthType = wallet`
+- Existing `humanVerified` and `miniAppUserId` profile state are preserved because wallet login only updates `lastAuthType`.
+- Wallet JWT issuance now carries profile snapshot fields:
+  - `authType = wallet`
+  - `humanVerified`
+  - `miniAppUserId`
+- Added auth tests covering wallet-login profile backfill and JWT claim preservation.
+
 ### Phase 4 - Mini-App Login Integration
 
 Tasks:
@@ -272,6 +284,29 @@ Exit criteria:
 
 - A mini-app user can authenticate and gets the same identity (`address`) used by all business modules.
 - Claims distinguish verified vs unverified mini-app users.
+
+Implementation note:
+
+- Added `POST /auth/miniapp/login`.
+- Added auth DTOs for:
+  - mini-app wallet payload
+  - optional human proof payload
+- Added `MiniAppAuthVerifier` inside `AuthModule` to keep Worldchain mini-app verification behind a single boundary.
+- Current verifier behavior follows the local example flow shape:
+  - verifies signed mini-app login payload against `address`
+  - requires the signed message to include the provided `nonce`
+  - optionally marks the user as human-verified when a matching `humanProof.signal` is provided for the same address
+- `AuthService.loginMiniApp(...)` now upserts `user_auth_profiles` with:
+  - `lastAuthType = miniapp`
+  - `miniAppUserId`
+  - `humanVerified`
+  - `humanVerifiedAt`
+  - `humanVerificationSource`
+- Mini-app login issues the same JWT/WSS credential pair used by the wallet flow, with:
+  - `sub = address`
+  - `authType = miniapp`
+  - `humanVerified`
+  - `miniAppUserId`
 
 ### Phase 5 - Policy Adaptation
 
