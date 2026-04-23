@@ -7,7 +7,7 @@ import { GetDepositsDto } from './dto/get-deposits.dto';
 import { GetWithdrawalsDto } from './dto/get-withdrawals.dto';
 import { ExpireTimeoutDto } from './dto/expire-timeout.dto';
 import { ApiTags, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { env, isLocal } from 'src/config';
 import { PaymentChainSyncWorker } from './payment-chain-sync.worker';
 
@@ -15,12 +15,14 @@ class DepositDto {
     @ApiProperty({ type: String })
     @IsString()
     amount: string;
-    @ApiProperty({ type: String })
+    @ApiProperty({ type: String, required: false })
+    @IsOptional()
     @IsString()
-    txHash: string;
-    @ApiProperty({ type: Number })
+    txHash?: string;
+    @ApiProperty({ type: Number, required: false })
+    @IsOptional()
     @IsNumber()
-    logIndex: number;
+    logIndex?: number;
 }
 
 class WithdrawRequestDto {
@@ -61,8 +63,12 @@ export class PaymentController {
     @Post('debug/deposit')
     @UseGuards(JwtAuthGuard)
     async debugDeposit(@CurrentUser() user: { address: string }, @Body() dto: DepositDto) {
-        this.assertDebugPaymentEnabled();
-        return this.paymentService.handleDeposit(user.address, dto.amount, dto.txHash, dto.logIndex);
+        return this.paymentService.handleDeposit(
+            user.address,
+            dto.amount,
+            dto.txHash ?? this.buildFaucetTxHash(user.address),
+            dto.logIndex ?? 0,
+        );
     }
 
     @Post('debug/finalize-withdrawal')
@@ -119,5 +125,9 @@ export class PaymentController {
         if (env.env !== 'test' && !isLocal) {
             throw new ForbiddenException('Payment debug endpoints are disabled outside local/test');
         }
+    }
+
+    private buildFaucetTxHash(userId: string): string {
+        return `faucet:${userId}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
     }
 }

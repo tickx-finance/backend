@@ -90,32 +90,42 @@ export class AuthService {
     }
 
     async validateWssSignature(address: string, message: string, signature: string, withChallenge?: boolean): Promise<boolean> {
-        const normalizedAddress = ethers.getAddress(address);
-        const cached = this.wssKeyCache.get(normalizedAddress);
-
-        if (!cached) {
+        let normalizedAddress: string;
+        try {
+            normalizedAddress = ethers.getAddress(address);
+        } catch {
             return false;
         }
 
-        if (cached.expiresAt < Date.now()) {
-            this.wssKeyCache.delete(normalizedAddress);
-            return false;
-        }
+        try {
+            const cached = this.wssKeyCache.get(normalizedAddress);
 
-        const storedKey = cached.key;
-        const keyBuffer = Buffer.from(storedKey, 'hex');
-
-        const hmac = crypto.createHmac('sha256', keyBuffer)
-            .update(message)
-
-        if (withChallenge) {
-            const challenge = await this.redis.get(`auth:challenge:${normalizedAddress}`);
-            if (!challenge) {
+            if (!cached) {
                 return false;
             }
-            hmac.update(challenge);
-        }
 
-        return hmac.digest('hex') === signature;
+            if (cached.expiresAt < Date.now()) {
+                this.wssKeyCache.delete(normalizedAddress);
+                return false;
+            }
+
+            const storedKey = cached.key;
+            const keyBuffer = Buffer.from(storedKey, 'hex');
+
+            const hmac = crypto.createHmac('sha256', keyBuffer)
+                .update(message)
+
+            if (withChallenge) {
+                const challenge = await this.redis.get(`auth:challenge:${normalizedAddress}`);
+                if (!challenge) {
+                    return false;
+                }
+                hmac.update(challenge);
+            }
+
+            return hmac.digest('hex') === signature;
+        } catch {
+            return false;
+        }
     }
 }

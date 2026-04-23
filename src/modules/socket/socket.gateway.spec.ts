@@ -65,6 +65,31 @@ describe('SocketGateway order follow subscriptions', () => {
     });
 });
 
+describe('SocketGateway place bet auth hardening', () => {
+    it('rejects invalid wss signature without placing order', async () => {
+        const harness = makeHarness({ authResult: false });
+
+        await harness.gateway.handlePlaceBet(harness.client as any, {
+            userId: 'demo-user',
+            marketId: 'BTCUSDT',
+            amount: '10',
+            userSignature: 'bad',
+            cell: {
+                gridTs: 1,
+                startTs: 2,
+                endTs: 3,
+                lowerPrice: '1.0000',
+                upperPrice: '2.0000',
+                rewardRate: '2',
+                gridSignature: 'cell-sig',
+            },
+        });
+
+        expect(harness.orderService.placeOrder).not.toHaveBeenCalled();
+        expect(harness.client.send).toHaveBeenCalledWith('Invalid wss signature');
+    });
+});
+
 function makeHarness(options: { authResult: boolean; canListen?: boolean }) {
     const auth = {
         validateWssSignature: vi.fn().mockResolvedValue(options.authResult),
