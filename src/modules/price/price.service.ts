@@ -17,10 +17,12 @@ import { OhlcService } from './ohlc.service';
 export class PriceService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PriceService.name);
   private readonly WS_URL = 'wss://fstream.binance.com/ws/btcusdt@aggTrade';
+  private readonly BINANCE_TIME_URL = 'https://fapi.binance.com/fapi/v3/time';
   private readonly WS_STALE_AFTER_MS = 15_000;
   private readonly WS_HEALTHCHECK_INTERVAL_MS = 5_000;
   private readonly WS_RECONNECT_BASE_DELAY_MS = 1_000;
   private readonly WS_RECONNECT_MAX_DELAY_MS = 30_000;
+  private readonly TIME_SYNC_INTERVAL_MS = 30_000;
 
   constructor(
     @Inject(EVENT_PUBLISHER)
@@ -36,7 +38,11 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
 
   // ========= READ ONLY =========
   getLatestTrade(): LatestPriceState | null {
-    return this.latestTrade ?? null;
+    if (!this.latestTrade) return null;
+    return {
+      ...this.latestTrade,
+      ts: this.getSyncedServerTimeMs(),
+    };
   }
 
   // ========================
@@ -46,10 +52,14 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
   private reconnectTimer?: NodeJS.Timeout;
   private heartbeatTimer?: NodeJS.Timeout;
   private snapshotTimer?: NodeJS.Timeout;
+  private timeSyncTimer?: NodeJS.Timeout;
   private isShuttingDown = false;
   private lastMessageAt?: number;
   private lastConnectAttemptAt?: number;
   private lastDisconnectAt?: number;
+  private binanceTimeOffsetMs = 0;
+  private lastTimeSyncAt?: number;
+  private lastTimeSyncError?: string;
   private reconnectAttempts = 0;
 
   // ========================
@@ -58,6 +68,8 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     if (!env.flag.runPriceTick) return;
 
+    void this.syncBinanceTime();
+    this.startTimeSyncLoop();
     this.connectWS();
     this.startSnapshotLoop();
     this.startHealthCheckLoop();
@@ -69,8 +81,43 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
 
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     if (this.snapshotTimer) clearInterval(this.snapshotTimer);
+    if (this.timeSyncTimer) clearInterval(this.timeSyncTimer);
 
     this.disconnectWS();
+  }
+
+  private startTimeSyncLoop() {
+    this.timeSyncTimer = setInterval(() => {
+      void this.syncBinanceTime();
+    }, this.TIME_SYNC_INTERVAL_MS);
+  }
+
+  private async syncBinanceTime(): Promise<void> {
+    const requestStartedAt = Date.now();
+    try {
+      const response = await fetch(this.BINANCE_TIME_URL);
+      if (!response.ok) {
+        throw new Error(`Binance time sync failed with HTTP ${response.status}`);
+      }
+      const payload = await response.json() as { serverTime?: number };
+      const serverTime = Number(payload.serverTime);
+      if (!Number.isFinite(serverTime)) {
+        throw new Error('Binance time sync response is missing serverTime');
+      }
+
+      const responseReceivedAt = Date.now();
+      const localMidpoint = requestStartedAt + (responseReceivedAt - requestStartedAt) / 2;
+      this.binanceTimeOffsetMs = Math.round(serverTime - localMidpoint);
+      this.lastTimeSyncAt = responseReceivedAt;
+      this.lastTimeSyncError = undefined;
+    } catch (error) {
+      this.lastTimeSyncError = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Binance time sync failed: ${this.lastTimeSyncError}`);
+    }
+  }
+
+  private getSyncedServerTimeMs(): number {
+    return Date.now() + this.binanceTimeOffsetMs;
   }
 
   // ========================
@@ -123,7 +170,7 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
         qty: Number(msg.q),
         tradeId: msg.a,
         isSell: msg.m, // true = sell market
-        ts: msg.T,
+        ts: this.getSyncedServerTimeMs(),
       };
     });
 
@@ -243,15 +290,16 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
   // ========================
   private startSnapshotLoop() {
     this.snapshotTimer = setInterval(() => {
-      if (!this.latestTrade) return;
+      const latestTrade = this.getLatestTrade();
+      if (!latestTrade) return;
 
       // const { price, qty, isSell } = this.latestTrade;
 
-      this.eventPublisher.emitNewPrice(this.latestTrade);
+      this.eventPublisher.emitNewPrice(latestTrade);
 
       const priceTick: PriceTick = {
-        timestamp: this.latestTrade.ts,
-        price: this.latestTrade.price,
+        timestamp: latestTrade.ts,
+        price: latestTrade.price,
       };
       this.orderPriceTickChannel.send(priceTick);
 
@@ -291,8 +339,11 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
       lastMessageAgeMs,
       lastConnectAttemptAt: this.lastConnectAttemptAt ?? null,
       lastDisconnectAt: this.lastDisconnectAt ?? null,
+      binanceTimeOffsetMs: this.binanceTimeOffsetMs,
+      lastTimeSyncAt: this.lastTimeSyncAt ?? null,
+      lastTimeSyncError: this.lastTimeSyncError ?? null,
       staleAfterMs: this.WS_STALE_AFTER_MS,
-      latestTradeTs: this.latestTrade?.ts ?? null,
+      latestTradeTs: this.getLatestTrade()?.ts ?? null,
     };
   }
 }
