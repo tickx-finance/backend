@@ -410,3 +410,4 @@ contracts
 docker.env
 benchmark-results/*
 fortress
+mini-app-user

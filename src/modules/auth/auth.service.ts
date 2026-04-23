@@ -6,6 +6,8 @@ import * as jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from '../../config';
 import * as crypto from 'crypto';
+import { AuthType } from './entities/user-auth-profile.entity';
+import { AuthJwtPayload } from './types';
 
 @Injectable()
 export class AuthService {
@@ -51,8 +53,17 @@ export class AuthService {
         };
     }
 
-    private generateJwt(address: string): string {
-        return jwt.sign({ sub: address }, env.secret.jwtSecret, { expiresIn: '1d' });
+    private generateJwt(
+        address: string,
+        claims: Partial<Omit<AuthJwtPayload, 'sub'>> = {},
+    ): string {
+        const payload: AuthJwtPayload = {
+            sub: address,
+            authType: claims.authType ?? AuthType.WALLET,
+            humanVerified: claims.humanVerified ?? false,
+            miniAppUserId: claims.miniAppUserId ?? null,
+        };
+        return jwt.sign(payload, env.secret.jwtSecret, { expiresIn: '1d' });
     }
 
     async generateWssKey(address: string) {

@@ -1,6 +1,8 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { env } from '../../../config';
+import { AuthType } from '../entities/user-auth-profile.entity';
+import { AuthJwtPayload, toAuthenticatedUser } from '../types';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -19,10 +21,22 @@ export class JwtAuthGuard implements CanActivate {
         }
 
         try {
-            const payload = jwt.verify(token, env.secret.jwtSecret) as any;
-            request.user = { address: payload.sub };
+            const payload = jwt.verify(token, env.secret.jwtSecret) as Partial<AuthJwtPayload>;
+            if (typeof payload.sub !== 'string' || !payload.sub) {
+                throw new UnauthorizedException('Invalid token payload');
+            }
+
+            request.user = toAuthenticatedUser({
+                sub: payload.sub,
+                authType: payload.authType ?? AuthType.WALLET,
+                humanVerified: payload.humanVerified === true,
+                miniAppUserId: payload.miniAppUserId ?? null,
+            });
             return true;
         } catch (error) {
+            if (error instanceof UnauthorizedException) {
+                throw error;
+            }
             throw new UnauthorizedException('Invalid token');
         }
     }
