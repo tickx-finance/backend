@@ -2,7 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { LatestPriceState } from 'src/libs/price-tick';
-import { BalanceUpdateMessage, DepositSuccessMessage, EventName, EventPublisher, getGridRoom, getUserRoom, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from './types';
+import {
+    BalanceUpdateMessage,
+    DepositSuccessMessage,
+    EventName,
+    EventPublisher,
+    FollowedOrderUpdateMessage,
+    getOrderFollowTargetRoom,
+    getUserRoom,
+    OrderUpdateMessage,
+    WithdrawCancelledMessage,
+    WithdrawQueuedMessage,
+    WithdrawSuccessMessage,
+} from './types';
 import { Cell } from 'src/libs/cell';
 
 @Injectable()
@@ -30,6 +42,10 @@ export class SocketService implements EventPublisher {
         this.server
             .to(getUserRoom(msg.userId))
             .emit(EventName.OrderUpdate, msg);
+
+        this.server
+            .to(getOrderFollowTargetRoom(msg.userId))
+            .emit(EventName.FollowedOrderUpdate, toFollowedOrderUpdateMessage(msg));
     }
 
     async emitDepositSuccess(msg: DepositSuccessMessage) {
@@ -61,4 +77,17 @@ export class SocketService implements EventPublisher {
         this.server
             .emit(EventName.PriceNow, msg);
     }
+}
+
+export function toFollowedOrderUpdateMessage(msg: OrderUpdateMessage): FollowedOrderUpdateMessage {
+    return {
+        targetUserId: msg.userId,
+        orderId: msg.orderId,
+        marketId: msg.marketId,
+        amount: msg.amount,
+        cell: msg.cell,
+        status: msg.status,
+        settledTimestamp: msg.settledTimestamp,
+        settledWin: msg.settledWin,
+    };
 }

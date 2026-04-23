@@ -21,16 +21,20 @@ export enum SocketEvents {
 export enum SocketChannel {
     GRID = 'grid',
     USER = 'user', // Requires auth in real app, simplified here
+    ORDER_FOLLOW_TARGET = 'order_follow_target',
 }
 
 export enum EventName {
     UnsubscribeGrid = 'unsubscribe_grid',
     SubscribeUser = 'subscribe_user',
     UnsubscribeUser = 'unsubscribe_user',
+    SubscribeOrderFollows = 'subscribe_order_follows',
+    UnsubscribeOrderFollows = 'unsubscribe_order_follows',
     PlaceBet = 'place_bet',
     GridUpdate = 'grid_update',
     BalanceUpdate = 'balance_update',
     OrderUpdate = 'order_update',
+    FollowedOrderUpdate = 'followed_order_update',
     DepositSuccess = 'deposit_success',
     WithdrawQueued = 'withdraw_queued',
     WithdrawCancelled = 'withdraw_cancelled',
@@ -53,6 +57,17 @@ export interface OrderUpdateMessage {
     amount: string;
     cell: any;
 
+    status: OrderStatus;
+    settledTimestamp?: number;
+    settledWin?: boolean;
+}
+
+export interface FollowedOrderUpdateMessage {
+    targetUserId: string;
+    orderId: string;
+    marketId: string;
+    amount: string;
+    cell: any;
     status: OrderStatus;
     settledTimestamp?: number;
     settledWin?: boolean;
@@ -93,6 +108,12 @@ export interface SubscribeUserPayload {
     signature: string;
 }
 
+export interface SubscribeOrderFollowsPayload {
+    userId: string;
+    targetUserId: string;
+    signature: string;
+}
+
 export interface PlaceOrderPayload {
     userId: string;
     marketId: string;
@@ -107,6 +128,10 @@ export function getUserRoom(userId: string): string {
 
 export function getGridRoom(): string {
     return `${SocketChannel.GRID}`;
+}
+
+export function getOrderFollowTargetRoom(targetUserId: string): string {
+    return `${SocketChannel.ORDER_FOLLOW_TARGET}:${targetUserId}`;
 }
 
 export interface EventPublisher {

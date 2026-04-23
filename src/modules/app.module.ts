@@ -18,6 +18,7 @@ import { SettlementModule } from './settlement/settlement.module';
 import { RiskModule } from './risk/risk.module';
 import { DistributionModule } from './distribution/distribution.module';
 import { StrategyModule } from './strategy/strategy.module';
+import { OrderFollowModule } from './order-follow/order-follow.module';
 // import { WorkerModule } from './worker/worker.module';
 
 @Module({
@@ -35,6 +36,7 @@ import { StrategyModule } from './strategy/strategy.module';
         SocketModule,
         AccountModule,
         OrderModule,
+        OrderFollowModule,
         PaymentModule,
         PriceModule,
         GridModule,

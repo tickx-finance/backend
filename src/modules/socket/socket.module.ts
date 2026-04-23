@@ -4,9 +4,10 @@ import { SocketGateway } from "./socket.gateway";
 import { SocketService } from "./socket.service";
 import { EVENT_PUBLISHER } from "./types";
 import { OrderModule } from "../order/order.module";
+import { OrderFollowModule } from "../order-follow/order-follow.module";
 
 @Module({
-  imports: [AuthModule, forwardRef(() => OrderModule)],
+  imports: [AuthModule, forwardRef(() => OrderModule), OrderFollowModule],
   providers: [
     SocketGateway,
     SocketService,
