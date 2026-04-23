@@ -15,6 +15,8 @@ import { LedgerEntry } from '../account/entities/ledger-entry.entity';
 import { LedgerSnapshot } from '../account/entities/ledger-snapshot.entity';
 import { EVENT_PUBLISHER, EventPublisher } from '../socket/types';
 import { SocketModule } from '../socket/socket.module';
+import { UserAuthProfile } from '../auth/entities/user-auth-profile.entity';
+import { UserAuthProfileService } from '../auth/user-auth-profile.service';
 import { Order } from './entities/order.entity';
 import { OrderModule } from './order.module';
 import { OrderService } from './order.service';
@@ -43,6 +45,7 @@ describe('OrderModule integration', () => {
     let redis: Redis;
     let accountService: AccountService;
     let orderService: OrderService;
+    let userAuthProfileService: UserAuthProfileService;
 
     beforeAll(async () => {
         Date.now = () => fixedNow;
@@ -58,7 +61,7 @@ describe('OrderModule integration', () => {
                 TypeOrmModule.forRoot({
                     type: 'postgres',
                     url: postgresTestUrl,
-                    entities: [LedgerEntry, LedgerSnapshot, Order],
+                    entities: [LedgerEntry, LedgerSnapshot, Order, UserAuthProfile],
                     synchronize: true,
                     dropSchema: true,
                 }),
@@ -80,6 +83,7 @@ describe('OrderModule integration', () => {
         dataSource = app.get(DataSource);
         accountService = app.get(AccountService);
         orderService = app.get(OrderService);
+        userAuthProfileService = app.get(UserAuthProfileService);
         redis = new Redis(redisTestUrl);
     });
 
@@ -93,8 +97,12 @@ describe('OrderModule integration', () => {
 
     afterAll(async () => {
         Date.now = originalDateNow;
-        await redis.quit();
-        await app.close();
+        if (redis) {
+            await redis.quit();
+        }
+        if (app) {
+            await app.close();
+        }
     });
 
     async function cleanup() {
@@ -104,6 +112,7 @@ describe('OrderModule integration', () => {
 
         if (dataSource) {
             await dataSource.getRepository(Order).clear();
+            await dataSource.getRepository(UserAuthProfile).clear();
             await dataSource.getRepository(LedgerSnapshot).clear();
             await dataSource.getRepository(LedgerEntry).clear();
         }
@@ -175,6 +184,48 @@ describe('OrderModule integration', () => {
             status: OrderStatus.SETTLED,
             settledWin: false,
             settledAt: expiredTick.timestamp,
+        });
+    });
+
+    it('credits verified winners with configured settlement bonus and persists realized fields', async () => {
+        const userId = 'order-human-verified-winner';
+        const marketId = 'BTCUSDT';
+        const startTs = nextTradableStartTs();
+
+        await userAuthProfileService.upsert({
+            address: userId,
+            humanVerified: true,
+        });
+        await accountService.deposit(userId, '1000', 'verified-order-deposit', 1);
+
+        const winningCell = signedCell({
+            startTs,
+            lowerPrice: '90',
+            upperPrice: '110',
+            rewardRate: '2',
+        });
+
+        const order = await orderService.placeOrder(userId, {
+            amount: '100',
+            marketId,
+            cell: winningCell,
+        });
+
+        await orderService.handleSinglePriceTick({
+            timestamp: startTs + 10,
+            price: 100,
+        });
+
+        await expectBalance(userId, { free: '1104', locked: '0' });
+
+        const saved = await orderService.getOrderById(order.orderId);
+        expect(saved).toMatchObject({
+            status: OrderStatus.SETTLED,
+            settledWin: true,
+            settledPayout: '204',
+            settledRewardRate: '2.04',
+            settlementBonusBps: 200,
+            settlementHumanVerified: true,
         });
     });
 

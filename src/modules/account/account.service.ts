@@ -6,6 +6,10 @@ import { RedisBalanceStoreService } from './services/redis-balance-store.service
 import { LedgerService } from './services/ledger.service';
 import { BalanceDelta, BalanceState, EconomicEventType, validateBalanceDelta } from './types';
 
+export interface SettleBetOptions {
+    effectiveRewardRate?: string;
+}
+
 @Injectable()
 export class AccountService {
     private readonly logger = new Logger(AccountService.name);
@@ -127,6 +131,7 @@ export class AccountService {
         rewardRate: string = '0',
         marketId: string,
         cellId: string,
+        options?: SettleBetOptions,
     ) {
         const ref = `${marketId}:${cellId}`;
         const balance = await this.ensureBalanceLoaded(userId);
@@ -138,7 +143,8 @@ export class AccountService {
 
         let delta: BalanceDelta;
         if (win) {
-            const payout = betAmount.times(rewardRate).decimalPlaces(9, BigNumber.ROUND_DOWN);
+            const payoutRewardRate = options?.effectiveRewardRate ?? rewardRate;
+            const payout = betAmount.times(payoutRewardRate).decimalPlaces(9, BigNumber.ROUND_DOWN);
             delta = {
                 locked: betAmount.negated().toString(),
                 free: payout.toFixed(),

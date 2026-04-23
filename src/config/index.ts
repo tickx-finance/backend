@@ -61,6 +61,7 @@ const envVarsSchema = Joi.object()
     GRID_ENGINE: Joi.string().valid('legacy', 'fortress').default('fortress'),
     FORTRESS_BANDWIDTH_WARMUP_TICKS: Joi.number().integer().min(0).default(100),
     FORTRESS_BANDWIDTH_REFRESH_TICKS: Joi.number().integer().min(1).default(3600),
+    HUMAN_VERIFIED_WIN_BONUS_BPS: Joi.number().integer().min(0).default(200),
   })
   .unknown();
 
@@ -142,6 +143,9 @@ export const env = {
   fortress: {
     bandwidthWarmupTicks: envVars.FORTRESS_BANDWIDTH_WARMUP_TICKS,
     bandwidthRefreshTicks: envVars.FORTRESS_BANDWIDTH_REFRESH_TICKS,
+  },
+  order: {
+    humanVerifiedWinBonusBps: envVars.HUMAN_VERIFIED_WIN_BONUS_BPS,
   },
   secret: {
     jwtSecret: envVars.JWT_SECRET,

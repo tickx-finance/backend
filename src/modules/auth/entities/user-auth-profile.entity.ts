@@ -28,7 +28,7 @@ export class UserAuthProfile {
     })
     lastAuthType: AuthType;
 
-    @Column({ nullable: true })
+    @Column({ type: 'text', nullable: true })
     miniAppUserId: string | null;
 
     @Column({ default: false })

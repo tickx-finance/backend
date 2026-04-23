@@ -55,4 +55,16 @@ export class Order {
 
     @Column({ nullable: true })
     settledWin?: boolean;
+
+    @Column({ type: 'numeric', nullable: true })
+    settledPayout?: string | null;
+
+    @Column({ type: 'numeric', nullable: true })
+    settledRewardRate?: string | null;
+
+    @Column({ type: 'integer', nullable: true })
+    settlementBonusBps?: number | null;
+
+    @Column({ type: 'boolean', nullable: true })
+    settlementHumanVerified?: boolean | null;
 }

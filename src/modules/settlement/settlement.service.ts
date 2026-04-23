@@ -362,9 +362,15 @@ export class SettlementService {
     if (!order.settledWin) {
       return '0';
     }
-    // Calculate payout: (amount * rewardRate)
-    // For now, treat as direct multiplier
-    const payout = BigInt(Math.floor(Number(order.amount) * Number(order.rewardRate) * 1000000)) / BigInt(1000000); // Assuming basis points
+
+    if (order.settledPayout != null) {
+      return order.settledPayout;
+    }
+
+    // Legacy fallback for historical rows that predate persisted realized settlement fields.
+    const payout =
+      BigInt(Math.floor(Number(order.amount) * Number(order.rewardRate) * 1000000)) /
+      BigInt(1000000);
     return payout.toString();
   }
 

@@ -13,6 +13,8 @@ import { defaultMarketConfig, getSettledStartTs } from 'src/libs/market.config';
 import { BigNumber } from 'bignumber.js';
 import { env } from 'src/config';
 import { FortressLiabilityService } from '../grid/fortress-engine/fortress-liability.service';
+import { UserAuthProfileService } from '../auth/user-auth-profile.service';
+import { computeHumanVerifiedWinSettlement } from './human-verified-win-bonus';
 
 @Injectable()
 export class OrderService implements OnModuleInit {
@@ -32,6 +34,7 @@ export class OrderService implements OnModuleInit {
         @Inject(EVENT_PUBLISHER)
         private readonly events: EventPublisher,
         private readonly fortressLiabilityService: FortressLiabilityService,
+        private readonly userAuthProfileService: UserAuthProfileService,
     ) {
     }
 
@@ -231,6 +234,21 @@ export class OrderService implements OnModuleInit {
 
         const cell = buildCellFromOrder(order);
         const cellId = getCellId(cell);
+        const profile = await this.userAuthProfileService.getCachedByAddress(order.userId);
+        const humanVerified = profile?.humanVerified === true;
+        const settlementBonus = win
+            ? computeHumanVerifiedWinSettlement({
+                amount: order.amount,
+                baseRewardRate: order.rewardRate,
+                humanVerified,
+                bonusRateBps: env.order.humanVerifiedWinBonusBps,
+            })
+            : {
+                settledRewardRate: order.rewardRate,
+                settledPayout: '0',
+                settlementBonusBps: 0,
+                settlementHumanVerified: humanVerified,
+            };
 
         // 1. Call Account Service
         await this.accountService.settleBet(
@@ -239,7 +257,10 @@ export class OrderService implements OnModuleInit {
             win,
             order.rewardRate,
             order.marketId,
-            cellId
+            cellId,
+            {
+                effectiveRewardRate: settlementBonus.settledRewardRate,
+            },
         );
 
         // 2. Update Status
@@ -280,6 +301,10 @@ export class OrderService implements OnModuleInit {
         // 6. Update db record
         order.settledAt = settledTs;
         order.settledWin = win;
+        order.settledPayout = settlementBonus.settledPayout;
+        order.settledRewardRate = settlementBonus.settledRewardRate;
+        order.settlementBonusBps = settlementBonus.settlementBonusBps;
+        order.settlementHumanVerified = settlementBonus.settlementHumanVerified;
 
         await this.orderRepository.save(order);
         this.fortressLiabilityService.recordOrderSettled(

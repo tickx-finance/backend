@@ -16,6 +16,7 @@ describe('UserAuthProfileService', () => {
             miniAppUserId: null,
             humanVerified: false,
         });
+        expect(harness.redis.set).toHaveBeenCalled();
     });
 
     it('updates an existing profile with miniapp and human verification metadata', async () => {
@@ -49,6 +50,7 @@ describe('UserAuthProfileService', () => {
             humanVerifiedAt: verifiedAt,
             humanVerificationSource: 'world_id',
         });
+        expect(harness.redis.set).toHaveBeenCalled();
     });
 
     it('reads a profile by address', async () => {
@@ -62,18 +64,73 @@ describe('UserAuthProfileService', () => {
             .resolves
             .toEqual(existing);
     });
+
+    it('reads a profile from redis cache before hitting postgres', async () => {
+        const existing = {
+            id: 'profile-1',
+            address: '0x1111111111111111111111111111111111111111',
+            lastAuthType: AuthType.MINIAPP,
+            miniAppUserId: 'world-user-1',
+            humanVerified: true,
+            humanVerifiedAt: new Date('2026-04-23T12:00:00Z'),
+            humanVerificationSource: 'world_id',
+            createdAt: new Date('2026-04-23T12:00:00Z'),
+            updatedAt: new Date('2026-04-23T12:00:00Z'),
+        };
+        const harness = makeHarness({
+            redisValue: JSON.stringify({
+                ...existing,
+                humanVerifiedAt: existing.humanVerifiedAt.toISOString(),
+                createdAt: existing.createdAt.toISOString(),
+                updatedAt: existing.updatedAt.toISOString(),
+            }),
+        });
+
+        await expect(harness.service.getCachedByAddress(existing.address))
+            .resolves
+            .toMatchObject({
+                address: existing.address,
+                humanVerified: true,
+                miniAppUserId: 'world-user-1',
+            });
+        expect(harness.repo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('loads from postgres on cache miss and backfills redis', async () => {
+        const existing = {
+            id: 'profile-1',
+            address: '0x1111111111111111111111111111111111111111',
+            lastAuthType: AuthType.MINIAPP,
+            miniAppUserId: 'world-user-1',
+            humanVerified: true,
+            humanVerifiedAt: new Date('2026-04-23T12:00:00Z'),
+            humanVerificationSource: 'world_id',
+        };
+        const harness = makeHarness({ existing });
+
+        await expect(harness.service.getCachedByAddress(existing.address))
+            .resolves
+            .toEqual(existing);
+        expect(harness.repo.findOne).toHaveBeenCalledTimes(1);
+        expect(harness.redis.set).toHaveBeenCalled();
+    });
 });
 
-function makeHarness(options: { existing?: any } = {}) {
+function makeHarness(options: { existing?: any; redisValue?: string | null } = {}) {
     const repo = {
         findOne: vi.fn().mockResolvedValue(options.existing ?? null),
         findOneOrFail: vi.fn().mockResolvedValue(options.existing),
         create: vi.fn().mockImplementation((entity) => entity),
         save: vi.fn().mockImplementation(async (entity) => entity),
     };
+    const redis = {
+        get: vi.fn().mockResolvedValue(options.redisValue ?? null),
+        set: vi.fn().mockResolvedValue('OK'),
+    };
 
     return {
         repo,
-        service: new UserAuthProfileService(repo as any),
+        redis,
+        service: new UserAuthProfileService(repo as any, redis as any),
     };
 }
