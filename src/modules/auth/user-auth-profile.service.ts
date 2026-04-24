@@ -9,6 +9,7 @@ export interface UpsertUserAuthProfileInput {
     address: string;
     lastAuthType?: AuthType;
     miniAppUserId?: string | null;
+    miniAppUsername?: string | null;
     humanVerified?: boolean;
     humanVerifiedAt?: Date | null;
     humanVerificationSource?: string | null;
@@ -60,6 +61,9 @@ export class UserAuthProfileService {
             if (input.miniAppUserId !== undefined) {
                 existing.miniAppUserId = input.miniAppUserId;
             }
+            if (input.miniAppUsername !== undefined) {
+                existing.miniAppUsername = input.miniAppUsername;
+            }
             if (input.humanVerified !== undefined) {
                 existing.humanVerified = input.humanVerified;
             }
@@ -82,6 +86,7 @@ export class UserAuthProfileService {
                 address: input.address,
                 lastAuthType: input.lastAuthType ?? AuthType.WALLET,
                 miniAppUserId: input.miniAppUserId ?? null,
+                miniAppUsername: input.miniAppUsername ?? null,
                 humanVerified: input.humanVerified ?? false,
                 humanVerifiedAt: input.humanVerifiedAt ?? null,
                 humanVerificationSource: input.humanVerificationSource ?? null,
@@ -101,6 +106,9 @@ export class UserAuthProfileService {
             raced.lastAuthType = input.lastAuthType ?? raced.lastAuthType;
             if (input.miniAppUserId !== undefined) {
                 raced.miniAppUserId = input.miniAppUserId;
+            }
+            if (input.miniAppUsername !== undefined) {
+                raced.miniAppUsername = input.miniAppUsername;
             }
             if (input.humanVerified !== undefined) {
                 raced.humanVerified = input.humanVerified;
@@ -149,6 +157,7 @@ export class UserAuthProfileService {
             address: String(parsed.address),
             lastAuthType: parsed.lastAuthType as AuthType,
             miniAppUserId: parsed.miniAppUserId ? String(parsed.miniAppUserId) : null,
+            miniAppUsername: parsed.miniAppUsername ? String(parsed.miniAppUsername) : null,
             humanVerified: parsed.humanVerified === true,
             humanVerifiedAt: parsed.humanVerifiedAt ? new Date(String(parsed.humanVerifiedAt)) : null,
             humanVerificationSource: parsed.humanVerificationSource

@@ -6,7 +6,7 @@ import * as jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from '../../config';
 import * as crypto from 'crypto';
-import { AuthType } from './entities/user-auth-profile.entity';
+import { AuthType, UserAuthProfile } from './entities/user-auth-profile.entity';
 import { AuthJwtPayload } from './types';
 import { UserAuthProfileService } from './user-auth-profile.service';
 import { MiniAppLoginDto, MiniAppVerifyHumanDto } from './dto/miniapp-login.dto';
@@ -57,19 +57,7 @@ export class AuthService {
             lastAuthType: AuthType.WALLET,
         });
 
-        // Generate Credentials
-        const jwtToken = this.generateJwt(normalizedAddress, {
-            authType: AuthType.WALLET,
-            humanVerified: profile.humanVerified,
-            miniAppUserId: profile.miniAppUserId,
-        });
-        const wssKey = await this.generateWssKey(normalizedAddress);
-
-        return {
-            accessToken: jwtToken,
-            wssKey: wssKey.key,
-            wssKeyExpiresAt: wssKey.expiresAt,
-        };
+        return this.issueAuthSession(normalizedAddress, profile, AuthType.WALLET);
     }
 
     async loginMiniApp(dto: MiniAppLoginDto) {
@@ -82,20 +70,10 @@ export class AuthService {
             address: verified.address,
             lastAuthType: AuthType.MINIAPP,
             miniAppUserId: dto.miniAppUserId,
+            miniAppUsername: dto.miniAppUsername ?? null,
         });
 
-        const jwtToken = this.generateJwt(verified.address, {
-            authType: AuthType.MINIAPP,
-            humanVerified: profile.humanVerified,
-            miniAppUserId: profile.miniAppUserId,
-        });
-        const wssKey = await this.generateWssKey(verified.address);
-
-        return {
-            accessToken: jwtToken,
-            wssKey: wssKey.key,
-            wssKeyExpiresAt: wssKey.expiresAt,
-        };
+        return this.issueAuthSession(verified.address, profile, AuthType.MINIAPP);
     }
 
     async verifyMiniAppHuman(address: string, dto: MiniAppVerifyHumanDto) {
@@ -127,18 +105,7 @@ export class AuthService {
                 nullifierHash,
             });
 
-            const jwtToken = this.generateJwt(normalizedAddress, {
-                authType: profile.lastAuthType,
-                humanVerified: profile.humanVerified,
-                miniAppUserId: profile.miniAppUserId,
-            });
-            const wssKey = await this.generateWssKey(normalizedAddress);
-
-            return {
-                accessToken: jwtToken,
-                wssKey: wssKey.key,
-                wssKeyExpiresAt: wssKey.expiresAt,
-            };
+            return this.issueAuthSession(normalizedAddress, profile, profile.lastAuthType);
         } finally {
             await RedisLock.releaseLock(this.redis, lockKey);
         }
@@ -159,6 +126,29 @@ export class AuthService {
             miniAppUserId: claims.miniAppUserId ?? null,
         };
         return jwt.sign(payload, env.secret.jwtSecret, { expiresIn: '1d' });
+    }
+
+    private async issueAuthSession(
+        address: string,
+        profile: UserAuthProfile,
+        authType: AuthType,
+    ) {
+        const jwtToken = this.generateJwt(address, {
+            authType,
+            humanVerified: profile.humanVerified,
+            miniAppUserId: profile.miniAppUserId,
+        });
+        const wssKey = await this.generateWssKey(address);
+
+        return {
+            accessToken: jwtToken,
+            wssKey: wssKey.key,
+            wssKeyExpiresAt: wssKey.expiresAt,
+            authType,
+            humanVerified: profile.humanVerified,
+            miniAppUserId: profile.miniAppUserId,
+            miniAppUsername: profile.miniAppUsername,
+        };
     }
 
     async generateWssKey(address: string) {

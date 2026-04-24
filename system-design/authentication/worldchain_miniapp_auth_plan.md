@@ -551,6 +551,18 @@ Exit criteria:
 - JWT claims are snapshots of verified backend state
 - no trust is placed in unverified login payload for `humanVerified`
 
+Implementation note:
+
+- Auth responses from wallet login, mini-app login, and verify-human now all return the same snapshot fields:
+  - `authType`
+  - `humanVerified`
+  - `miniAppUserId`
+- JWT claims are issued from persisted `user_auth_profiles` state, not directly from client payloads.
+- Wallet login continues to issue `authType = wallet` while preserving any previously verified `humanVerified` state on the profile.
+- Mini-app login continues to issue `authType = miniapp` while preserving a previously verified `humanVerified` state after verify-human has already succeeded.
+- `user_auth_profiles` also stores optional `miniAppUsername` as front-end supplied metadata from mini-app login.
+- The server does not verify `miniAppUsername`; it only verifies the mini-app login payload and then persists the username if present.
+
 ### Alignment Phase G - Tests And Hardening
 
 Tasks:
@@ -573,6 +585,28 @@ Tasks:
 Exit criteria:
 
 - mini-app auth behavior is defensible against replay and fake human-proof payloads
+
+Implementation note:
+
+- Added verifier unit coverage in:
+  - `src/modules/auth/miniapp-auth.verifier.spec.ts`
+- Covered hardening branches for:
+  - invalid mini-app status
+  - failed SIWE verification
+  - successful SIWE address normalization
+  - verify-human signal mismatch
+  - failed World App human proof verification
+- Added auth integration flow coverage in:
+  - `src/modules/auth/auth.e2e-spec.ts`
+- The integration suite covers:
+  - `nonce -> miniapp login -> verify-human`
+  - JWT before verify-human has `humanVerified = false`
+  - JWT after verify-human has `humanVerified = true`
+  - replayed nonce rejection
+- The auth integration suite is opt-in and only runs when:
+  - `RUN_AUTH_E2E=true`
+  - `POSTGRES_TEST_URL` is set
+  - `REDIS_TEST_URL` is set
 
 ## Key Risks
 

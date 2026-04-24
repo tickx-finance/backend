@@ -31,6 +31,9 @@ export class UserAuthProfile {
     @Column({ type: 'text', nullable: true })
     miniAppUserId: string | null;
 
+    @Column({ type: 'text', nullable: true })
+    miniAppUsername: string | null;
+
     @Column({ default: false })
     humanVerified: boolean;
 

@@ -14,6 +14,7 @@ describe('UserAuthProfileService', () => {
             address: '0x1111111111111111111111111111111111111111',
             lastAuthType: AuthType.WALLET,
             miniAppUserId: null,
+            miniAppUsername: null,
             humanVerified: false,
         });
         expect(harness.redis.set).toHaveBeenCalled();
@@ -25,6 +26,7 @@ describe('UserAuthProfileService', () => {
             address: '0x1111111111111111111111111111111111111111',
             lastAuthType: AuthType.WALLET,
             miniAppUserId: null,
+            miniAppUsername: null,
             humanVerified: false,
             humanVerifiedAt: null,
             humanVerificationSource: null,
@@ -37,6 +39,7 @@ describe('UserAuthProfileService', () => {
             address: existing.address,
             lastAuthType: AuthType.MINIAPP,
             miniAppUserId: 'world-user-1',
+            miniAppUsername: 'kol_name',
             humanVerified: true,
             humanVerifiedAt: verifiedAt,
             humanVerificationSource: 'world_id',
@@ -48,6 +51,7 @@ describe('UserAuthProfileService', () => {
             address: existing.address,
             lastAuthType: AuthType.MINIAPP,
             miniAppUserId: 'world-user-1',
+            miniAppUsername: 'kol_name',
             humanVerified: true,
             humanVerifiedAt: verifiedAt,
             humanVerificationSource: 'world_id',
@@ -74,6 +78,7 @@ describe('UserAuthProfileService', () => {
             address: '0x1111111111111111111111111111111111111111',
             lastAuthType: AuthType.MINIAPP,
             miniAppUserId: 'world-user-1',
+            miniAppUsername: 'kol_name',
             humanVerified: true,
             humanVerifiedAt: new Date('2026-04-23T12:00:00Z'),
             humanVerificationSource: 'world_id',
@@ -96,6 +101,7 @@ describe('UserAuthProfileService', () => {
                 address: existing.address,
                 humanVerified: true,
                 miniAppUserId: 'world-user-1',
+                miniAppUsername: 'kol_name',
             });
         expect(harness.repo.findOne).not.toHaveBeenCalled();
     });
@@ -106,6 +112,7 @@ describe('UserAuthProfileService', () => {
             address: '0x1111111111111111111111111111111111111111',
             lastAuthType: AuthType.MINIAPP,
             miniAppUserId: 'world-user-1',
+            miniAppUsername: 'kol_name',
             humanVerified: true,
             humanVerifiedAt: new Date('2026-04-23T12:00:00Z'),
             humanVerificationSource: 'world_id',

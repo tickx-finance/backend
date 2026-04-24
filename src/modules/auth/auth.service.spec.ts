@@ -62,6 +62,10 @@ describe('AuthService wss signature validation', () => {
         expect(result).toMatchObject({
             wssKey: 'wss-key',
             wssKeyExpiresAt: 123,
+            authType: AuthType.WALLET,
+            humanVerified: true,
+            miniAppUserId: 'world-user-1',
+            miniAppUsername: undefined,
         });
 
         wssSpy.mockRestore();
@@ -75,6 +79,7 @@ describe('AuthService wss signature validation', () => {
                 address: wallet.address,
                 lastAuthType: AuthType.MINIAPP,
                 miniAppUserId: 'world-user-7',
+                miniAppUsername: 'mini-user-7',
                 humanVerified: false,
                 humanVerifiedAt: null,
                 humanVerificationSource: null,
@@ -102,6 +107,7 @@ describe('AuthService wss signature validation', () => {
         const result = await service.loginMiniApp({
             nonce,
             miniAppUserId: 'world-user-7',
+            miniAppUsername: 'mini-user-7',
             payload: {
                 status: 'success',
                 message: 'unused-in-stub',
@@ -120,6 +126,7 @@ describe('AuthService wss signature validation', () => {
             address: wallet.address,
             lastAuthType: AuthType.MINIAPP,
             miniAppUserId: 'world-user-7',
+            miniAppUsername: 'mini-user-7',
         }));
         expect(payload).toMatchObject({
             sub: wallet.address,
@@ -130,6 +137,10 @@ describe('AuthService wss signature validation', () => {
         expect(result).toMatchObject({
             wssKey: 'mini-wss-key',
             wssKeyExpiresAt: 456,
+            authType: AuthType.MINIAPP,
+            humanVerified: false,
+            miniAppUserId: 'world-user-7',
+            miniAppUsername: 'mini-user-7',
         });
 
         wssSpy.mockRestore();
@@ -179,6 +190,7 @@ describe('AuthService wss signature validation', () => {
                 address: wallet.address,
                 lastAuthType: AuthType.MINIAPP,
                 miniAppUserId: 'world-user-7',
+                miniAppUsername: 'mini-user-7',
                 humanVerified: false,
                 nullifierHash: null,
             }),
@@ -187,6 +199,7 @@ describe('AuthService wss signature validation', () => {
                 address: wallet.address,
                 lastAuthType: AuthType.MINIAPP,
                 miniAppUserId: 'world-user-7',
+                miniAppUsername: 'mini-user-7',
                 humanVerified: true,
                 humanVerifiedAt: new Date('2026-04-24T00:00:00.000Z'),
                 humanVerificationSource: 'worldchain-miniapp',
@@ -234,6 +247,12 @@ describe('AuthService wss signature validation', () => {
             authType: AuthType.MINIAPP,
             humanVerified: true,
             miniAppUserId: 'world-user-7',
+        });
+        expect(result).toMatchObject({
+            authType: AuthType.MINIAPP,
+            humanVerified: true,
+            miniAppUserId: 'world-user-7',
+            miniAppUsername: 'mini-user-7',
         });
         expect(redis.set).toHaveBeenCalledWith(
             'flag:auth:verify-human:nullifier',
@@ -304,5 +323,111 @@ describe('AuthService wss signature validation', () => {
                 verification_level: 'orb',
             },
         })).rejects.toThrow('Invalid Nullifier Hash');
+    });
+
+    it('preserves verified human state on wallet login', async () => {
+        const wallet = ethers.Wallet.createRandom();
+        const challenge = 'challenge-text';
+        const redis = {
+            get: vi.fn().mockResolvedValue(challenge),
+            del: vi.fn().mockResolvedValue(1),
+        };
+        const profileService = {
+            upsert: vi.fn().mockResolvedValue({
+                address: wallet.address,
+                lastAuthType: AuthType.WALLET,
+                miniAppUserId: 'world-user-verified',
+                humanVerified: true,
+                humanVerifiedAt: new Date('2026-04-24T00:00:00.000Z'),
+                humanVerificationSource: 'worldchain-miniapp',
+                nullifierHash: 'nullifier',
+            }),
+        };
+        const service = new AuthService(
+            redis as any,
+            profileService as any,
+            { verify: vi.fn() } as any,
+            { consumeNonce: vi.fn(), createNonce: vi.fn() } as any,
+        );
+        const signature = await wallet.signMessage(challenge);
+        const wssSpy = vi.spyOn(service, 'generateWssKey')
+            .mockResolvedValue({ key: 'wallet-wss-key', expiresAt: 123 });
+
+        const result = await service.login(wallet.address, signature);
+        const payload = jwt.verify(result.accessToken, env.secret.jwtSecret) as any;
+
+        expect(payload).toMatchObject({
+            sub: wallet.address,
+            authType: AuthType.WALLET,
+            humanVerified: true,
+            miniAppUserId: 'world-user-verified',
+        });
+        expect(result).toMatchObject({
+            authType: AuthType.WALLET,
+            humanVerified: true,
+            miniAppUserId: 'world-user-verified',
+            miniAppUsername: undefined,
+        });
+
+        wssSpy.mockRestore();
+    });
+
+    it('preserves verified human state on mini-app login after prior verification', async () => {
+        const wallet = ethers.Wallet.createRandom();
+        const profileService = {
+            upsert: vi.fn().mockResolvedValue({
+                address: wallet.address,
+                lastAuthType: AuthType.MINIAPP,
+                miniAppUserId: 'world-user-7',
+                miniAppUsername: 'mini-user-7',
+                humanVerified: true,
+                humanVerifiedAt: new Date('2026-04-24T00:00:00.000Z'),
+                humanVerificationSource: 'worldchain-miniapp',
+                nullifierHash: 'nullifier',
+            }),
+        };
+        const verifier = {
+            verifyLogin: vi.fn().mockResolvedValue({
+                address: wallet.address,
+            }),
+            verifyHuman: vi.fn(),
+        };
+        const service = new AuthService(
+            { get: vi.fn(), set: vi.fn(), del: vi.fn() } as any,
+            profileService as any,
+            verifier as any,
+            { consumeNonce: vi.fn().mockResolvedValue(true), createNonce: vi.fn() } as any,
+        );
+        const wssSpy = vi.spyOn(service, 'generateWssKey')
+            .mockResolvedValue({ key: 'miniapp-wss-key', expiresAt: 456 });
+
+        const result = await service.loginMiniApp({
+            nonce: 'miniapp-nonce-2',
+            miniAppUserId: 'world-user-7',
+            miniAppUsername: 'mini-user-7',
+            payload: {
+                status: 'success',
+                message: 'unused-in-stub',
+                signature: 'unused-in-stub',
+                address: wallet.address,
+                version: 2,
+            },
+        });
+        const payload = jwt.verify(result.accessToken, env.secret.jwtSecret) as any;
+
+        expect(payload).toMatchObject({
+            sub: wallet.address,
+            authType: AuthType.MINIAPP,
+            humanVerified: true,
+            miniAppUserId: 'world-user-7',
+        });
+        expect(result).toMatchObject({
+            authType: AuthType.MINIAPP,
+            humanVerified: true,
+            miniAppUserId: 'world-user-7',
+            miniAppUsername: 'mini-user-7',
+        });
+
+        wssSpy.mockRestore();
     });
 });

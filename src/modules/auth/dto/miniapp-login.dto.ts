@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsString, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class MiniAppWalletAuthSuccessPayloadDto {
     @IsString()
@@ -84,4 +84,9 @@ export class MiniAppLoginDto {
     @IsNotEmpty()
     @ApiProperty({ type: String })
     miniAppUserId: string;
+
+    @IsOptional()
+    @IsString()
+    @ApiProperty({ type: String, required: false })
+    miniAppUsername?: string;
 }
