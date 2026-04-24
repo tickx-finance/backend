@@ -26,7 +26,7 @@ export class AuthService {
     ) { }
 
     async generateChallenge(address: string): Promise<string> {
-        const challenge = `Sign this message to login to Tapl: ${uuidv4()}`;
+        const challenge = `Sign this message to login to TickX: ${uuidv4()}`;
         // Store challenge with 5 minutes TTL
         await this.redis.set(`auth:challenge:${ethers.getAddress(address)}`, challenge, 'EX', 300);
         return challenge;

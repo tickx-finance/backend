@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { LoginDto } from './dto/login.dto';
 import { MiniAppLoginDto, MiniAppVerifyHumanDto } from './dto/miniapp-login.dto';
 
 @ApiTags('Auth')
@@ -19,7 +20,7 @@ export class AuthController {
 
     @Post('login')
     @ApiOperation({ summary: 'Login with signed challenge' })
-    async login(@Body() body: { address: string; signature: string }) {
+    async login(@Body() body: LoginDto) {
         return this.authService.login(body.address, body.signature);
     }
 
