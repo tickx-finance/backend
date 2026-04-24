@@ -22,6 +22,7 @@ export enum SocketChannel {
     GRID = 'grid',
     USER = 'user', // Requires auth in real app, simplified here
     ORDER_FOLLOW_TARGET = 'order_follow_target',
+    SUGGESTED_STRATEGY = 'suggested_strategy',
 }
 
 export enum EventName {
@@ -30,6 +31,8 @@ export enum EventName {
     UnsubscribeUser = 'unsubscribe_user',
     SubscribeOrderFollows = 'subscribe_order_follows',
     UnsubscribeOrderFollows = 'unsubscribe_order_follows',
+    SubscribeSuggestedStrategy = 'subscribe_suggested_strategy',
+    UnsubscribeSuggestedStrategy = 'unsubscribe_suggested_strategy',
     PlaceBet = 'place_bet',
     GridUpdate = 'grid_update',
     BalanceUpdate = 'balance_update',
@@ -41,6 +44,7 @@ export enum EventName {
     WithdrawSuccess = 'withdraw_success',
     PriceNow = 'price_now',
     FortressMcDiagnostics = 'fortress_mc_diagnostics',
+    SuggestedStrategyUpdate = 'suggested_strategy_update',
 }
 
 export interface BalanceUpdateMessage {
@@ -109,6 +113,16 @@ export interface FortressMcDiagnosticsMessage {
     pRaw: number[][];
 }
 
+export type SuggestedStrategyVolatilityRegime = 'low' | 'medium' | 'high';
+
+export interface SuggestedStrategyMessage {
+    cells: Cell[];
+    volatilityRegime: SuggestedStrategyVolatilityRegime;
+    sigma: number | null;
+    atrMean: number | null;
+    timestamp: number;
+}
+
 export interface SubscribeUserPayload {
     userId: string;
     signature: string;
@@ -140,6 +154,10 @@ export function getOrderFollowTargetRoom(targetUserId: string): string {
     return `${SocketChannel.ORDER_FOLLOW_TARGET}:${targetUserId}`;
 }
 
+export function getSuggestedStrategyRoom(): string {
+    return `${SocketChannel.SUGGESTED_STRATEGY}`;
+}
+
 export interface EventPublisher {
     emitDepositSuccess(msg: DepositSuccessMessage): Promise<void>;
     emitWithdrawQueued(msg: WithdrawQueuedMessage): Promise<void>;
@@ -150,6 +168,7 @@ export interface EventPublisher {
     emitNewPrice(price: LatestPriceState): Promise<void>;
     emitGridUpdate(grid: Cell[]): Promise<void>;
     emitFortressMcDiagnostics(msg: FortressMcDiagnosticsMessage): Promise<void>;
+    emitSuggestedStrategyUpdate(msg: SuggestedStrategyMessage): Promise<void>;
 }
 
 export const EVENT_PUBLISHER = Symbol('EVENT_PUBLISHER');

@@ -62,7 +62,7 @@ const envVarsSchema = Joi.object()
 
     RUN_PRICE_TICK: Joi.boolean().required(),
     RUN_SETTLEMENT: Joi.boolean().required(),
-    FORTRESS_STREAM_MC_DIAGNOSTICS: Joi.boolean().default(true),
+    FORTRESS_STREAM_MC_DIAGNOSTICS: Joi.boolean().default(false),
     GRID_ENGINE: Joi.string().valid('legacy', 'fortress').default('fortress'),
     FORTRESS_BANDWIDTH_WARMUP_TICKS: Joi.number().integer().min(0).default(100),
     FORTRESS_BANDWIDTH_REFRESH_TICKS: Joi.number().integer().min(1).default(3600),

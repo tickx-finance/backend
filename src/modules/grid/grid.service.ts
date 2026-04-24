@@ -12,6 +12,7 @@ import { buildFortressQuotes } from './fortress-engine/fortress-quote-builder';
 import { mapFortressQuotesToCells } from './fortress-engine/fortress-cell.mapper';
 import { computeFortressAdaptivePWinMatrix } from './fortress-engine/fortress-adaptive-mc';
 import { FortressLiabilityService } from './fortress-engine/fortress-liability.service';
+import { SuggestedStrategyService } from './suggested-strategy.service';
 
 const TIME_CELL = 5.0 * 1000;
 const PRICE_CELL = 25.0;
@@ -53,6 +54,7 @@ export class GridService implements OnModuleInit {
     private readonly gridOracleStateService: GridOracleStateService,
     private readonly fortressStateEngine: FortressStateEngine,
     private readonly fortressLiabilityService: FortressLiabilityService,
+    private readonly suggestedStrategyService: SuggestedStrategyService,
   ) { }
 
   onModuleInit() {
@@ -119,7 +121,15 @@ export class GridService implements OnModuleInit {
         }
 
         if (this.latestFortressCells.length > 0) {
+          const modeState = this.fortressStateEngine.getModeState();
           this.eventPublisher.emitGridUpdate(this.latestFortressCells);
+          void this.eventPublisher.emitSuggestedStrategyUpdate(
+            this.suggestedStrategyService.buildSuggestedStrategy({
+              cells: this.latestFortressCells,
+              sigma: modeState.sigma,
+              atrMean: modeState.atrMean,
+            }),
+          );
         }
         return;
       }
@@ -175,6 +185,9 @@ export class GridService implements OnModuleInit {
       }
 
       this.eventPublisher.emitGridUpdate(cells);
+      void this.eventPublisher.emitSuggestedStrategyUpdate(
+        this.suggestedStrategyService.buildSuggestedStrategy({ cells }),
+      );
     }, 250);
   }
 

@@ -9,9 +9,11 @@ import {
     EventPublisher,
     FortressMcDiagnosticsMessage,
     FollowedOrderUpdateMessage,
+    getSuggestedStrategyRoom,
     getOrderFollowTargetRoom,
     getUserRoom,
     OrderUpdateMessage,
+    SuggestedStrategyMessage,
     WithdrawCancelledMessage,
     WithdrawQueuedMessage,
     WithdrawSuccessMessage,
@@ -81,6 +83,12 @@ export class SocketService implements EventPublisher {
 
     async emitFortressMcDiagnostics(msg: FortressMcDiagnosticsMessage) {
         this.server.emit(EventName.FortressMcDiagnostics, msg);
+    }
+
+    async emitSuggestedStrategyUpdate(msg: SuggestedStrategyMessage) {
+        this.server
+            .to(getSuggestedStrategyRoom())
+            .emit(EventName.SuggestedStrategyUpdate, msg);
     }
 }
 

@@ -35,6 +35,7 @@ const silentEventPublisher: EventPublisher = {
     emitNewPrice: async () => undefined,
     emitGridUpdate: async () => undefined,
     emitFortressMcDiagnostics: async () => undefined,
+    emitSuggestedStrategyUpdate: async () => undefined,
 };
 
 describe('OrderModule integration', () => {

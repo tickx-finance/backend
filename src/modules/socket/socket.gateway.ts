@@ -10,6 +10,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import {
   EventName,
+  getSuggestedStrategyRoom,
   getOrderFollowTargetRoom,
   getUserRoom,
   PlaceOrderPayload,
@@ -81,6 +82,26 @@ export class SocketGateway {
     } else {
       client.send('Invalid wss signature');
     }
+  }
+
+  @SubscribeMessage(EventName.SubscribeSuggestedStrategy)
+  async handleSubscribeSuggestedStrategy(
+    @ConnectedSocket() client: Socket,
+  ) {
+    const room = getSuggestedStrategyRoom();
+    client.join(room);
+    client.emit('subscribed', { room, status: 'success' });
+    this.logger.log(`User ${client.id} joined suggested strategy room ${room}`);
+  }
+
+  @SubscribeMessage(EventName.UnsubscribeSuggestedStrategy)
+  async handleUnsubscribeSuggestedStrategy(
+    @ConnectedSocket() client: Socket,
+  ) {
+    const room = getSuggestedStrategyRoom();
+    client.leave(room);
+    client.emit('unsubscribed', { room, status: 'success' });
+    this.logger.log(`User ${client.id} left suggested strategy room ${room}`);
   }
 
   @SubscribeMessage(EventName.UnsubscribeOrderFollows)

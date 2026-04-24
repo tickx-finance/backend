@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { OrderStatus } from '../order/types';
 import { SocketService, toFollowedOrderUpdateMessage } from './socket.service';
-import { EventName, getOrderFollowTargetRoom, getUserRoom, OrderUpdateMessage } from './types';
+import { EventName, getOrderFollowTargetRoom, getSuggestedStrategyRoom, getUserRoom, OrderUpdateMessage } from './types';
 
 describe('SocketService order update fanout', () => {
     it('emits private order update and followed order update to target broadcast room', async () => {
@@ -51,10 +51,33 @@ describe('SocketService order update fanout', () => {
             pRaw: [[0.5]],
         }));
     });
+
+    it('emits suggested strategy updates to the dedicated room', async () => {
+        const service = new SocketService();
+        const server = makeServer();
+        service.server = server as any;
+
+        await service.emitSuggestedStrategyUpdate({
+            cells: [{ startTs: 1 } as any],
+            volatilityRegime: 'low',
+            sigma: 0.1,
+            atrMean: 1,
+            timestamp: 1,
+        });
+
+        expect(server.to).toHaveBeenNthCalledWith(1, getSuggestedStrategyRoom());
+        expect(server.emitters[0].emit).toHaveBeenCalledWith(
+            EventName.SuggestedStrategyUpdate,
+            expect.objectContaining({
+                volatilityRegime: 'low',
+            }),
+        );
+    });
 });
 
 function makeServer() {
     const emitters = [
+        { emit: vi.fn() },
         { emit: vi.fn() },
         { emit: vi.fn() },
     ];
@@ -62,7 +85,8 @@ function makeServer() {
         emitters,
         to: vi.fn()
             .mockReturnValueOnce(emitters[0])
-            .mockReturnValueOnce(emitters[1]),
+            .mockReturnValueOnce(emitters[1])
+            .mockReturnValueOnce(emitters[2]),
     };
 }
 

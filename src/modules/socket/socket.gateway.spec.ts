@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getOrderFollowTargetRoom } from './types';
+import { getOrderFollowTargetRoom, getSuggestedStrategyRoom } from './types';
 import { SocketGateway } from './socket.gateway';
 
 describe('SocketGateway order follow subscriptions', () => {
@@ -87,6 +87,32 @@ describe('SocketGateway place bet auth hardening', () => {
 
         expect(harness.orderService.placeOrder).not.toHaveBeenCalled();
         expect(harness.client.send).toHaveBeenCalledWith('Invalid wss signature');
+    });
+});
+
+describe('SocketGateway suggested strategy subscriptions', () => {
+    it('joins the shared suggested strategy room', async () => {
+        const harness = makeHarness({ authResult: true });
+
+        await harness.gateway.handleSubscribeSuggestedStrategy(harness.client as any);
+
+        expect(harness.client.join).toHaveBeenCalledWith(getSuggestedStrategyRoom());
+        expect(harness.client.emit).toHaveBeenCalledWith('subscribed', {
+            room: getSuggestedStrategyRoom(),
+            status: 'success',
+        });
+    });
+
+    it('leaves the shared suggested strategy room', async () => {
+        const harness = makeHarness({ authResult: true });
+
+        await harness.gateway.handleUnsubscribeSuggestedStrategy(harness.client as any);
+
+        expect(harness.client.leave).toHaveBeenCalledWith(getSuggestedStrategyRoom());
+        expect(harness.client.emit).toHaveBeenCalledWith('unsubscribed', {
+            room: getSuggestedStrategyRoom(),
+            status: 'success',
+        });
     });
 });
 
