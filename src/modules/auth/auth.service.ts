@@ -76,6 +76,18 @@ export class AuthService {
         return this.issueAuthSession(verified.address, profile, AuthType.MINIAPP);
     }
 
+    async verifyMiniAppHumanMock(address: string) {
+        const normalizedAddress = ethers.getAddress(address);
+        const profile = await this.userAuthProfileService.upsert({
+            address: normalizedAddress,
+            humanVerified: true,
+            humanVerifiedAt: new Date(),
+            humanVerificationSource: 'worldchain-miniapp',
+            nullifierHash: uuidv4(),
+        });
+
+        return this.issueAuthSession(normalizedAddress, profile, profile.lastAuthType);
+    }
     async verifyMiniAppHuman(address: string, dto: MiniAppVerifyHumanDto) {
         const normalizedAddress = ethers.getAddress(address);
         const nullifierHash = dto.payload.nullifier_hash;

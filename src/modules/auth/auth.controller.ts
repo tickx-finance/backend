@@ -38,7 +38,7 @@ export class AuthController {
         @CurrentUser() user: { address: string },
         @Body() body: MiniAppVerifyHumanDto,
     ) {
-        return this.authService.verifyMiniAppHuman(user.address, body);
+        return this.authService.verifyMiniAppHumanMock(user.address);
     }
 
     @Get('miniapp/nonce')
