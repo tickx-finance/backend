@@ -16,7 +16,7 @@ import { OhlcService } from './ohlc.service';
 @Injectable()
 export class PriceService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PriceService.name);
-  private readonly WS_URL = 'wss://fstream.binance.com/ws/btcusdt@aggTrade';
+  private readonly WS_URL = 'wss://stream.binance.com:9443/ws/btcusdt@aggTrade';
   private readonly BINANCE_TIME_URL = 'https://fapi.binance.com/fapi/v1/time';
   private readonly WS_STALE_AFTER_MS = 15_000;
   private readonly WS_HEALTHCHECK_INTERVAL_MS = 5_000;
