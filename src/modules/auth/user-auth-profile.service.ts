@@ -12,6 +12,7 @@ export interface UpsertUserAuthProfileInput {
     humanVerified?: boolean;
     humanVerifiedAt?: Date | null;
     humanVerificationSource?: string | null;
+    nullifierHash?: string | null;
 }
 
 const USER_AUTH_PROFILE_CACHE_TTL_SECONDS = 60 * 60 * 24;
@@ -27,6 +28,10 @@ export class UserAuthProfileService {
 
     async getByAddress(address: string): Promise<UserAuthProfile | null> {
         return this.userAuthProfileRepo.findOne({ where: { address } });
+    }
+
+    async getByNullifierHash(nullifierHash: string): Promise<UserAuthProfile | null> {
+        return this.userAuthProfileRepo.findOne({ where: { nullifierHash } });
     }
 
     async getCachedByAddress(address: string): Promise<UserAuthProfile | null> {
@@ -64,6 +69,9 @@ export class UserAuthProfileService {
             if (input.humanVerificationSource !== undefined) {
                 existing.humanVerificationSource = input.humanVerificationSource;
             }
+            if (input.nullifierHash !== undefined) {
+                existing.nullifierHash = input.nullifierHash;
+            }
             const saved = await this.userAuthProfileRepo.save(existing);
             await this.setCache(saved);
             return saved;
@@ -77,6 +85,7 @@ export class UserAuthProfileService {
                 humanVerified: input.humanVerified ?? false,
                 humanVerifiedAt: input.humanVerifiedAt ?? null,
                 humanVerificationSource: input.humanVerificationSource ?? null,
+                nullifierHash: input.nullifierHash ?? null,
             });
             const saved = await this.userAuthProfileRepo.save(profile);
             await this.setCache(saved);
@@ -101,6 +110,9 @@ export class UserAuthProfileService {
             }
             if (input.humanVerificationSource !== undefined) {
                 raced.humanVerificationSource = input.humanVerificationSource;
+            }
+            if (input.nullifierHash !== undefined) {
+                raced.nullifierHash = input.nullifierHash;
             }
             const saved = await this.userAuthProfileRepo.save(raced);
             await this.setCache(saved);
@@ -142,6 +154,7 @@ export class UserAuthProfileService {
             humanVerificationSource: parsed.humanVerificationSource
                 ? String(parsed.humanVerificationSource)
                 : null,
+            nullifierHash: parsed.nullifierHash ? String(parsed.nullifierHash) : null,
             createdAt: parsed.createdAt ? new Date(String(parsed.createdAt)) : undefined,
             updatedAt: parsed.updatedAt ? new Date(String(parsed.updatedAt)) : undefined,
         } as UserAuthProfile;

@@ -51,6 +51,10 @@ const envVarsSchema = Joi.object()
 
     JWT_SECRET: Joi.string().required(),
     APP_API_KEY: Joi.string().required(),
+    WORLD_APP_APP_IDS: Joi.string().default(''),
+    WORLD_APP_DOMAINS: Joi.string().default(''),
+    WORLD_APP_URIS: Joi.string().default(''),
+    WORLD_APP_API_KEY: Joi.string().default(''),
 
     ADMIN_PRIVATE_KEY: Joi.string().required(),
 
@@ -127,6 +131,12 @@ export const env = {
     broker: envVars.KAFKA_BROKER,
     topicPrefix: envVars.KAFKA_TOPIC_PREFIX,
   },
+  worldApp: {
+    appIds: splitCsv(envVars.WORLD_APP_APP_IDS),
+    domains: splitCsv(envVars.WORLD_APP_DOMAINS),
+    uris: splitCsv(envVars.WORLD_APP_URIS),
+    apiKey: envVars.WORLD_APP_API_KEY,
+  },
   flag: {
     isRunningKafka:
       envVars.KAFKA_RUNNING_FLAG === true ||
@@ -161,3 +171,10 @@ export const env = {
 
 export const isMainnet = env.network === 'mainnet';
 export const isTestnet = env.network === 'testnet';
+
+function splitCsv(value: string): string[] {
+  return (value || '')
+    .split(',')
+    .map((item: string) => item.trim())
+    .filter(Boolean);
+}

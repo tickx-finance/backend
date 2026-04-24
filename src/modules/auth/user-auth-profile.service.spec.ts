@@ -28,6 +28,7 @@ describe('UserAuthProfileService', () => {
             humanVerified: false,
             humanVerifiedAt: null,
             humanVerificationSource: null,
+            nullifierHash: null,
         };
         const harness = makeHarness({ existing });
         const verifiedAt = new Date('2026-04-23T12:00:00Z');
@@ -39,6 +40,7 @@ describe('UserAuthProfileService', () => {
             humanVerified: true,
             humanVerifiedAt: verifiedAt,
             humanVerificationSource: 'world_id',
+            nullifierHash: 'nullifier-1',
         });
 
         expect(profile).toMatchObject({
@@ -49,6 +51,7 @@ describe('UserAuthProfileService', () => {
             humanVerified: true,
             humanVerifiedAt: verifiedAt,
             humanVerificationSource: 'world_id',
+            nullifierHash: 'nullifier-1',
         });
         expect(harness.redis.set).toHaveBeenCalled();
     });
@@ -74,6 +77,7 @@ describe('UserAuthProfileService', () => {
             humanVerified: true,
             humanVerifiedAt: new Date('2026-04-23T12:00:00Z'),
             humanVerificationSource: 'world_id',
+            nullifierHash: 'nullifier-1',
             createdAt: new Date('2026-04-23T12:00:00Z'),
             updatedAt: new Date('2026-04-23T12:00:00Z'),
         };
@@ -105,6 +109,7 @@ describe('UserAuthProfileService', () => {
             humanVerified: true,
             humanVerifiedAt: new Date('2026-04-23T12:00:00Z'),
             humanVerificationSource: 'world_id',
+            nullifierHash: 'nullifier-1',
         };
         const harness = makeHarness({ existing });
 
@@ -113,6 +118,19 @@ describe('UserAuthProfileService', () => {
             .toEqual(existing);
         expect(harness.repo.findOne).toHaveBeenCalledTimes(1);
         expect(harness.redis.set).toHaveBeenCalled();
+    });
+
+    it('reads a profile by nullifier hash', async () => {
+        const existing = {
+            id: 'profile-1',
+            address: '0x1111111111111111111111111111111111111111',
+            nullifierHash: 'nullifier-1',
+        };
+        const harness = makeHarness({ existing });
+
+        await expect(harness.service.getByNullifierHash(existing.nullifierHash))
+            .resolves
+            .toEqual(existing);
     });
 });
 

@@ -3,8 +3,9 @@ import { ethers } from 'ethers';
 import {
     MiniAppLoginDto,
     MiniAppVerifyHumanDto,
-    MiniAppWalletAuthSuccessPayloadDto,
 } from './dto/miniapp-login.dto';
+import { verifySiweMessage } from '../../libs/worldapp/siwe';
+import { WorldApp } from '../../libs/worldapp/worldapp';
 
 export interface MiniAppLoginVerificationResult {
     address: string;
@@ -18,53 +19,35 @@ export interface MiniAppHumanVerificationResult {
 
 @Injectable()
 export class MiniAppAuthVerifier {
-    verifyLogin(nonce: string, payload: MiniAppWalletAuthSuccessPayloadDto): MiniAppLoginVerificationResult {
+    async verifyLogin(nonce: string, payload: MiniAppLoginDto['payload']): Promise<MiniAppLoginVerificationResult> {
         if (payload.status.toLowerCase() !== 'success') {
             throw new UnauthorizedException('Invalid mini-app auth status');
         }
 
-        const normalizedAddress = ethers.getAddress(payload.address);
-        if (!payload.message.includes(nonce)) {
-            throw new BadRequestException('Mini-app auth message does not include nonce');
-        }
-
-        const recoveredAddress = ethers.verifyMessage(payload.message, payload.signature);
-        if (recoveredAddress !== normalizedAddress) {
+        const verifyResult = await verifySiweMessage(payload, nonce);
+        if (!verifyResult?.isValid || !verifyResult.siweMessageData.address) {
             throw new UnauthorizedException('Invalid mini-app signature');
         }
 
-        return { address: normalizedAddress };
+        return { address: ethers.getAddress(verifyResult.siweMessageData.address) };
     }
 
-    verifyHuman(address: string, humanProof?: MiniAppVerifyHumanDto): MiniAppHumanVerificationResult {
-        if (!humanProof) {
-            return {
-                humanVerified: false,
-                verificationSource: null,
-                verifiedAt: null,
-            };
-        }
-
+    async verifyHuman(address: string, humanProof: MiniAppVerifyHumanDto): Promise<MiniAppHumanVerificationResult> {
         const normalizedAddress = ethers.getAddress(address);
         const normalizedSignal = ethers.getAddress(humanProof.signal);
         if (normalizedSignal !== normalizedAddress) {
             throw new BadRequestException('Mini-app human proof signal mismatch');
         }
 
+        const verified = await WorldApp.verifyHuman(humanProof);
+        if (!verified) {
+            throw new BadRequestException('Invalid mini-app human proof');
+        }
+
         return {
             humanVerified: true,
             verificationSource: 'worldchain-miniapp',
             verifiedAt: new Date(),
-        };
-    }
-
-    verify(dto: MiniAppLoginDto): MiniAppLoginVerificationResult & MiniAppHumanVerificationResult {
-        const login = this.verifyLogin(dto.nonce, dto.payload);
-        const human = this.verifyHuman(login.address, dto.humanProof);
-
-        return {
-            ...login,
-            ...human,
         };
     }
 }

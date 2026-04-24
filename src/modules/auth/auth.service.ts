@@ -9,8 +9,10 @@ import * as crypto from 'crypto';
 import { AuthType } from './entities/user-auth-profile.entity';
 import { AuthJwtPayload } from './types';
 import { UserAuthProfileService } from './user-auth-profile.service';
-import { MiniAppLoginDto } from './dto/miniapp-login.dto';
+import { MiniAppLoginDto, MiniAppVerifyHumanDto } from './dto/miniapp-login.dto';
 import { MiniAppAuthVerifier } from './miniapp-auth.verifier';
+import { MiniAppNonceService } from './miniapp-nonce.service';
+import { RedisLock } from '../../utils/redis.utils';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +22,7 @@ export class AuthService {
         @InjectRedis() private readonly redis: Redis,
         private readonly userAuthProfileService: UserAuthProfileService,
         private readonly miniAppAuthVerifier: MiniAppAuthVerifier,
+        private readonly miniAppNonceService: MiniAppNonceService,
     ) { }
 
     async generateChallenge(address: string): Promise<string> {
@@ -70,14 +73,15 @@ export class AuthService {
     }
 
     async loginMiniApp(dto: MiniAppLoginDto) {
-        const verified = this.miniAppAuthVerifier.verify(dto);
+        const verified = await this.miniAppAuthVerifier.verifyLogin(dto.nonce, dto.payload);
+        const nonceConsumed = await this.miniAppNonceService.consumeNonce(dto.nonce);
+        if (!nonceConsumed) {
+            throw new BadRequestException('Invalid Nonce, Payload');
+        }
         const profile = await this.userAuthProfileService.upsert({
             address: verified.address,
             lastAuthType: AuthType.MINIAPP,
             miniAppUserId: dto.miniAppUserId,
-            humanVerified: verified.humanVerified,
-            humanVerifiedAt: verified.humanVerified ? verified.verifiedAt : null,
-            humanVerificationSource: verified.humanVerified ? verified.verificationSource : null,
         });
 
         const jwtToken = this.generateJwt(verified.address, {
@@ -92,6 +96,56 @@ export class AuthService {
             wssKey: wssKey.key,
             wssKeyExpiresAt: wssKey.expiresAt,
         };
+    }
+
+    async verifyMiniAppHuman(address: string, dto: MiniAppVerifyHumanDto) {
+        const normalizedAddress = ethers.getAddress(address);
+        const nullifierHash = dto.payload.nullifier_hash;
+        const lockKey = `auth:verify-human:${nullifierHash}`;
+        const isLockAcquired = await RedisLock.setLock(this.redis, lockKey, 5);
+        if (!isLockAcquired) {
+            throw new BadRequestException('Human verification already in progress');
+        }
+
+        try {
+            const currentProfile = await this.userAuthProfileService.getCachedByAddress(normalizedAddress);
+            if (currentProfile?.nullifierHash) {
+                throw new BadRequestException('User verified');
+            }
+
+            const existingNullifierProfile = await this.userAuthProfileService.getByNullifierHash(nullifierHash);
+            if (existingNullifierProfile && existingNullifierProfile.address !== normalizedAddress) {
+                throw new BadRequestException('Invalid Nullifier Hash');
+            }
+
+            const verification = await this.miniAppAuthVerifier.verifyHuman(normalizedAddress, dto);
+            const profile = await this.userAuthProfileService.upsert({
+                address: normalizedAddress,
+                humanVerified: verification.humanVerified,
+                humanVerifiedAt: verification.verifiedAt,
+                humanVerificationSource: verification.verificationSource,
+                nullifierHash,
+            });
+
+            const jwtToken = this.generateJwt(normalizedAddress, {
+                authType: profile.lastAuthType,
+                humanVerified: profile.humanVerified,
+                miniAppUserId: profile.miniAppUserId,
+            });
+            const wssKey = await this.generateWssKey(normalizedAddress);
+
+            return {
+                accessToken: jwtToken,
+                wssKey: wssKey.key,
+                wssKeyExpiresAt: wssKey.expiresAt,
+            };
+        } finally {
+            await RedisLock.releaseLock(this.redis, lockKey);
+        }
+    }
+
+    async generateMiniAppNonce(): Promise<string> {
+        return this.miniAppNonceService.createNonce();
     }
 
     private generateJwt(

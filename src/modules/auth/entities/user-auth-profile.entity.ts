@@ -40,6 +40,9 @@ export class UserAuthProfile {
     @Column({ type: 'text', nullable: true })
     humanVerificationSource: string | null;
 
+    @Column({ type: 'text', nullable: true, unique: true })
+    nullifierHash: string | null;
+
     @CreateDateColumn()
     createdAt: Date;
 
