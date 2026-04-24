@@ -34,4 +34,34 @@ describe('WithdrawalClaimSigner phase 1 primitives', () => {
         expect(nonce).toBe(7n);
         expect(digest).toMatch(/^0x[0-9a-f]{64}$/);
     });
+
+    it('converts decimal display amount into token base units before signing', async () => {
+        const signerWallet = ethers.Wallet.createRandom();
+        const chainClient = {
+            getQuoteAssetDecimals: async () => 8,
+            getTraderNonce: async () => 7n,
+            getClaimDigest: async (trader: string, amount: bigint, nonce: bigint, deadline: bigint) => {
+                expect(amount).toBe(1000000n);
+                return ethers.solidityPackedKeccak256(
+                    ['address', 'uint256', 'uint256', 'uint256'],
+                    [trader, amount, nonce, deadline],
+                );
+            },
+        };
+
+        const signer = new WithdrawalClaimSigner(chainClient as any);
+        const result = await signer.signWithdrawalClaim({
+            trader: signerWallet.address,
+            amount: '0.01',
+            deadline: 1234,
+        });
+
+        expect(result).toMatchObject({
+            trader: signerWallet.address,
+            amount: '1000000',
+            displayAmount: '0.01',
+            nonce: '7',
+            deadline: 1234,
+        });
+    });
 });

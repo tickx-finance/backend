@@ -6,6 +6,7 @@ import { PaymentChainClient } from './payment-chain.client';
 export interface WithdrawalClaimSignature {
     trader: string;
     amount: string;
+    displayAmount: string;
     nonce: string;
     deadline: number;
     signature: string;
@@ -24,7 +25,8 @@ export class WithdrawalClaimSigner {
         deadline: number;
     }): Promise<WithdrawalClaimSignature> {
         const trader = ethers.getAddress(input.trader);
-        const amount = BigInt(input.amount);
+        const decimals = await this.chainClient.getQuoteAssetDecimals();
+        const amount = ethers.parseUnits(input.amount, decimals);
         const deadline = BigInt(input.deadline);
         const nonce = await this.chainClient.getTraderNonce(trader);
         const digest = await this.chainClient.getClaimDigest(trader, amount, nonce, deadline);
@@ -33,6 +35,7 @@ export class WithdrawalClaimSigner {
         return {
             trader,
             amount: amount.toString(),
+            displayAmount: input.amount,
             nonce: nonce.toString(),
             deadline: input.deadline,
             signature,

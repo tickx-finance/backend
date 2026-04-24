@@ -11,6 +11,16 @@ export interface PaymentChainReader {
     getClaimDigest(trader: string, amount: bigint, nonce: bigint, deadline: bigint): Promise<string>;
 }
 
+const ERC20_METADATA_ABI = [
+    {
+        inputs: [],
+        name: 'decimals',
+        outputs: [{ internalType: 'uint8', name: '', type: 'uint8' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+];
+
 export const PAYMENT_CHAIN_READER = Symbol('PAYMENT_CHAIN_READER');
 
 export interface PaymentChainDecodedLog {
@@ -75,6 +85,19 @@ export class PaymentChainClient implements OnModuleInit {
 
     async getTraderNonce(trader: string): Promise<bigint> {
         return this.contract.nonces(ethers.getAddress(trader));
+    }
+
+    async getQuoteAssetDecimals(): Promise<number> {
+        const token = new ethers.Contract(
+            ethers.getAddress(env.payment.quoteAssetAddress),
+            ERC20_METADATA_ABI,
+            this.providers[0],
+        ) as ethers.Contract & { decimals(): Promise<number> };
+
+        return this.withProviderFallback(async (provider) => {
+            const connected = token.connect(provider) as typeof token;
+            return Number(await connected.decimals());
+        });
     }
 
     async getClaimDigest(

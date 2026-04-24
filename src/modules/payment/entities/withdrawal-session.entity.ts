@@ -18,6 +18,9 @@ export class WithdrawalSession {
     @Column('decimal', { precision: 30, scale: 9 })
     amount: string;
 
+    @Column({ type: 'text', nullable: true })
+    claimAmount: string | null;
+
     @Column({
         type: 'enum',
         enum: WithdrawalStatus,

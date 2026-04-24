@@ -81,6 +81,7 @@ export class PaymentService {
                 return {
                     sessionId: existingSession.sessionId,
                     amount: existingSession.amount,
+                    claimAmount: existingSession.claimAmount,
                     approvalSignature: existingSession.approvalSignature,
                     deadline: existingSession.deadline ? Number(existingSession.deadline) : null,
                     nonce: existingSession.nonce,
@@ -113,6 +114,7 @@ export class PaymentService {
             sessionId,
             userId,
             amount,
+            claimAmount: claim.amount,
             status: WithdrawalStatus.OPEN,
             approvalSignature: claim.signature,
             deadline: String(deadline),
@@ -134,6 +136,7 @@ export class PaymentService {
         return {
             sessionId,
             amount,
+            claimAmount: claim.amount,
             approvalSignature: claim.signature,
             deadline,
             nonce: claim.nonce,

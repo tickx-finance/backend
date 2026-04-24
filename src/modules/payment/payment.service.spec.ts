@@ -24,6 +24,7 @@ describe('PaymentService production withdrawal session', () => {
         expect(harness.withdrawalSessionRepo.save.mock.calls[0][0]).toMatchObject({
             userId: '0x1111111111111111111111111111111111111111',
             amount: '100',
+            claimAmount: '100000000',
             status: WithdrawalStatus.OPEN,
             approvalSignature: '0xsignature',
             nonce: '7',
@@ -32,6 +33,7 @@ describe('PaymentService production withdrawal session', () => {
         });
         expect(result).toMatchObject({
             amount: '100',
+            claimAmount: '100000000',
             approvalSignature: '0xsignature',
             nonce: '7',
             reservePoolAddress: '0x2222222222222222222222222222222222222222',
@@ -48,6 +50,7 @@ describe('PaymentService production withdrawal session', () => {
                 sessionId: 'session-1',
                 userId: '0x1111111111111111111111111111111111111111',
                 amount: '100',
+                claimAmount: '100000000',
                 status: WithdrawalStatus.OPEN,
                 approvalSignature: '0xexisting',
                 deadline: '1770000000',
@@ -70,6 +73,7 @@ describe('PaymentService production withdrawal session', () => {
         expect(result).toEqual({
             sessionId: 'session-1',
             amount: '100',
+            claimAmount: '100000000',
             approvalSignature: '0xexisting',
             deadline: 1770000000,
             nonce: '9',
@@ -92,7 +96,8 @@ function makeHarness(options: { existingSession?: any } = {}) {
     const signer = {
         signWithdrawalClaim: vi.fn().mockResolvedValue({
             trader: '0x1111111111111111111111111111111111111111',
-            amount: '100',
+            amount: '100000000',
+            displayAmount: '100',
             nonce: '7',
             deadline: 1770000000,
             signature: '0xsignature',
