@@ -40,6 +40,7 @@ export enum EventName {
     WithdrawCancelled = 'withdraw_cancelled',
     WithdrawSuccess = 'withdraw_success',
     PriceNow = 'price_now',
+    FortressMcDiagnostics = 'fortress_mc_diagnostics',
 }
 
 export interface BalanceUpdateMessage {
@@ -103,6 +104,11 @@ export interface WithdrawSuccessMessage {
     logIndex: number;
 }
 
+export interface FortressMcDiagnosticsMessage {
+    paths: number[][];
+    pRaw: number[][];
+}
+
 export interface SubscribeUserPayload {
     userId: string;
     signature: string;
@@ -143,6 +149,7 @@ export interface EventPublisher {
     emitBalanceUpdate(msg: BalanceUpdateMessage): Promise<void>;
     emitNewPrice(price: LatestPriceState): Promise<void>;
     emitGridUpdate(grid: Cell[]): Promise<void>;
+    emitFortressMcDiagnostics(msg: FortressMcDiagnosticsMessage): Promise<void>;
 }
 
 export const EVENT_PUBLISHER = Symbol('EVENT_PUBLISHER');

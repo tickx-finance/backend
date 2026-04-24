@@ -197,7 +197,14 @@ export class GridService implements OnModuleInit {
       config: FORTRESS_GLOBAL_CONFIG,
       modeState: transition.modeState,
       oracleSecond,
+      includePaths: env.flag.streamFortressMcDiagnostics,
     });
+    if (env.flag.streamFortressMcDiagnostics) {
+      void this.eventPublisher.emitFortressMcDiagnostics({
+        paths: pwin.paths,
+        pRaw: toFortressPrawSurface(transition.geometry.cells, pwin.pRaw),
+      });
+    }
     const { quotes } = buildFortressQuotes({
       geometry: transition.geometry,
       mode: FORTRESS_MAIN_MODE,
@@ -213,4 +220,24 @@ export class GridService implements OnModuleInit {
       privateKey: env.secret.cellSignerKey,
     });
   }
+}
+
+function toFortressPrawSurface(
+  cells: readonly { row: number; windowIndex: number }[],
+  pRaw: readonly number[],
+): number[][] {
+  let rowCount = 0;
+  let windowCount = 0;
+
+  for (const cell of cells) {
+    rowCount = Math.max(rowCount, cell.row + 1);
+    windowCount = Math.max(windowCount, cell.windowIndex + 1);
+  }
+
+  const surface = Array.from({ length: rowCount }, () => Array.from({ length: windowCount }, () => 0));
+  cells.forEach((cell, index) => {
+    surface[cell.row][cell.windowIndex] = pRaw[index] ?? 0;
+  });
+
+  return surface;
 }

@@ -16,6 +16,7 @@ export interface FortressAdaptivePWinInput {
     config: FortressGlobalConfig;
     modeState: FortressModeState;
     oracleSecond: number;
+    includePaths?: boolean;
 }
 
 export interface FortressAdaptivePWinResult extends FortressPWinMatrixResult {
@@ -26,6 +27,8 @@ export interface FortressAdaptivePWinResult extends FortressPWinMatrixResult {
     converged: boolean;
 }
 
+const MAX_DIAGNOSTIC_PATHS = 100;
+
 export function computeFortressAdaptivePWinMatrix({
     price,
     horizon,
@@ -34,12 +37,14 @@ export function computeFortressAdaptivePWinMatrix({
     config,
     modeState,
     oracleSecond,
+    includePaths = false,
 }: FortressAdaptivePWinInput): FortressAdaptivePWinResult {
     if (geometry.cells.length === 0 || horizon <= 0) {
         return {
             pwinMatrix: [],
             pRaw: geometry.cells.map(() => 0),
             pRawByCellId: Object.fromEntries(geometry.cells.map((cell) => [cell.cellId, 0])),
+            paths: [],
             pathsUsed: 0,
             batches: 0,
             maxStandardError: 0,
@@ -53,12 +58,13 @@ export function computeFortressAdaptivePWinMatrix({
         ? Math.max(batchSize, Math.trunc(mode.mcNMax))
         : batchSize;
     const pwinMatrix: number[][] = [];
+    const allPaths: number[][] = [];
     let stats: PWinErrorStats = emptyStats(geometry.cells.length);
     let batches = 0;
 
     while (pwinMatrix.length < maxPaths) {
         const pathCount = Math.min(batchSize, maxPaths - pwinMatrix.length);
-        const paths = simulateFortressPaths({
+        const simulation = simulateFortressPaths({
             price,
             pathCount,
             horizon,
@@ -78,7 +84,8 @@ export function computeFortressAdaptivePWinMatrix({
             mu: config.mu,
             useAntithetic: config.useAntithetic,
             epsilon: config.epsilon,
-        }).paths;
+        });
+        const paths = simulation.paths;
         const batchPwin = computeFortressPWinMatrix({
             geometry,
             paths,
@@ -89,6 +96,9 @@ export function computeFortressAdaptivePWinMatrix({
         });
 
         pwinMatrix.push(...batchPwin.pwinMatrix);
+        if (includePaths) {
+            allPaths.push(...paths);
+        }
         batches += 1;
         stats = computePWinErrorStats(pwinMatrix, geometry.cells.length, mode.pFloor);
 
@@ -105,6 +115,7 @@ export function computeFortressAdaptivePWinMatrix({
         pwinMatrix,
         pRaw: stats.pRaw,
         pRawByCellId,
+        paths: includePaths ? selectDiagnosticPaths(allPaths, config.useAntithetic) : [],
         pathsUsed: pwinMatrix.length,
         batches,
         maxStandardError: stats.maxStandardError,
@@ -162,4 +173,26 @@ interface PWinErrorStats {
     maxStandardError: number;
     maxRelativeError: number;
     converged(seAbs: number, seRel: number): boolean;
+}
+
+function selectDiagnosticPaths(paths: number[][], useAntithetic: boolean): number[][] {
+    if (paths.length <= MAX_DIAGNOSTIC_PATHS) {
+        return paths;
+    }
+
+    if (!useAntithetic || paths.length < 2) {
+        return paths.slice(0, MAX_DIAGNOSTIC_PATHS);
+    }
+
+    const baseCount = Math.ceil(paths.length / 2);
+    const antiCount = Math.floor(paths.length / 2);
+    const pairCount = Math.min(antiCount, Math.floor(MAX_DIAGNOSTIC_PATHS / 2));
+    const baseSample = paths.slice(0, pairCount);
+    const antiSample = paths.slice(baseCount, baseCount + pairCount);
+
+    if (MAX_DIAGNOSTIC_PATHS % 2 === 1 && baseCount > pairCount) {
+        return [...baseSample, paths[pairCount], ...antiSample];
+    }
+
+    return [...baseSample, ...antiSample];
 }

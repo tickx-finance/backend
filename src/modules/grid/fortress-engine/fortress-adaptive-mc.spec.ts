@@ -75,6 +75,69 @@ describe('Fortress adaptive Monte Carlo', () => {
         expect(result.maxStandardError).toBeGreaterThan(0);
         expect(result.converged).toBe(false);
     });
+
+    it('captures generated MC paths only when includePaths is enabled', () => {
+        const withoutPaths = computeFortressAdaptivePWinMatrix({
+            price: 100,
+            horizon: 2,
+            geometry: makeGeometry(),
+            mode: {
+                ...minimalMode(),
+                mcNMin: 3,
+                adaptiveMc: false,
+            },
+            config: FORTRESS_GLOBAL_CONFIG,
+            modeState: minimalState(),
+            oracleSecond: 100,
+            includePaths: false,
+        });
+        const withPaths = computeFortressAdaptivePWinMatrix({
+            price: 100,
+            horizon: 2,
+            geometry: makeGeometry(),
+            mode: {
+                ...minimalMode(),
+                mcNMin: 3,
+                adaptiveMc: false,
+            },
+            config: FORTRESS_GLOBAL_CONFIG,
+            modeState: minimalState(),
+            oracleSecond: 100,
+            includePaths: true,
+        });
+
+        expect(withoutPaths.paths).toEqual([]);
+        expect(withPaths.paths).toHaveLength(withPaths.pathsUsed);
+        expect(withPaths.paths[0]).toHaveLength(3);
+    });
+
+    it('caps diagnostic paths at 100 while preserving antithetic pairing order', () => {
+        const result = computeFortressAdaptivePWinMatrix({
+            price: 100,
+            horizon: 2,
+            geometry: makeGeometry(),
+            mode: {
+                ...minimalMode(),
+                mcNMin: 120,
+                mcNMax: 120,
+                adaptiveMc: false,
+            },
+            config: {
+                ...FORTRESS_GLOBAL_CONFIG,
+                useAntithetic: true,
+            },
+            modeState: minimalState(),
+            oracleSecond: 100,
+            includePaths: true,
+        });
+
+        expect(result.pathsUsed).toBe(120);
+        expect(result.paths).toHaveLength(100);
+        expect(result.paths.slice(0, 50)).toEqual(expect.any(Array));
+        expect(result.paths.slice(50)).toEqual(result.paths.slice(50, 100));
+        expect(result.paths[0][0]).toBe(100);
+        expect(result.paths[50][0]).toBe(100);
+    });
 });
 
 function makeGeometry() {

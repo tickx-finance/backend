@@ -7,6 +7,7 @@ import {
     DepositSuccessMessage,
     EventName,
     EventPublisher,
+    FortressMcDiagnosticsMessage,
     FollowedOrderUpdateMessage,
     getOrderFollowTargetRoom,
     getUserRoom,
@@ -76,6 +77,10 @@ export class SocketService implements EventPublisher {
         const msg = { price: price.price, ts: price.ts }
         this.server
             .emit(EventName.PriceNow, msg);
+    }
+
+    async emitFortressMcDiagnostics(msg: FortressMcDiagnosticsMessage) {
+        this.server.emit(EventName.FortressMcDiagnostics, msg);
     }
 }
 

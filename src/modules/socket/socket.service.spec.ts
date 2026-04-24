@@ -33,6 +33,24 @@ describe('SocketService order update fanout', () => {
             settledWin: undefined,
         });
     });
+
+    it('emits fortress MC diagnostics on a separate event channel', async () => {
+        const service = new SocketService();
+        const server = {
+            emit: vi.fn(),
+        };
+        service.server = server as any;
+
+        await service.emitFortressMcDiagnostics({
+            paths: [[100, 101]],
+            pRaw: [[0.5]],
+        });
+
+        expect(server.emit).toHaveBeenCalledWith(EventName.FortressMcDiagnostics, expect.objectContaining({
+            paths: [[100, 101]],
+            pRaw: [[0.5]],
+        }));
+    });
 });
 
 function makeServer() {

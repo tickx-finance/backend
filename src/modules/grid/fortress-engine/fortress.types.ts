@@ -193,6 +193,7 @@ export interface FortressPWinMatrixResult {
     pwinMatrix: number[][];
     pRaw: number[];
     pRawByCellId: Record<number, number>;
+    paths: number[][];
 }
 
 export interface FortressQuote extends FortressCell {

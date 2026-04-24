@@ -135,6 +135,7 @@ export function computeFortressPWinMatrix({
         pwinMatrix,
         pRaw,
         pRawByCellId,
+        paths,
     };
 }
 
@@ -157,6 +158,7 @@ function emptyPWinResult(cells: FortressGeometryCell[]): FortressPWinMatrixResul
         pwinMatrix: [],
         pRaw: cells.map(() => 0),
         pRawByCellId: Object.fromEntries(cells.map((cell) => [cell.cellId, 0])),
+        paths: [],
     };
 }
 

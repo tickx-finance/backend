@@ -1,5 +1,5 @@
 import { Global, Module } from "@nestjs/common";
-import { BalanceUpdateMessage, DepositSuccessMessage, EVENT_PUBLISHER, EventPublisher, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from "../modules/socket/types";
+import { BalanceUpdateMessage, DepositSuccessMessage, EVENT_PUBLISHER, EventPublisher, FortressMcDiagnosticsMessage, OrderUpdateMessage, WithdrawCancelledMessage, WithdrawQueuedMessage, WithdrawSuccessMessage } from "../modules/socket/types";
 import { LatestPriceState } from "src/libs/price-tick";
 import { Cell } from "src/libs/cell";
 
@@ -27,6 +27,9 @@ export class MockEventPublisher implements EventPublisher {
     }
     async emitGridUpdate(grid: Cell[]): Promise<void> {
         console.log('[MockEventPublisher] emitGridUpdate', JSON.stringify(grid));
+    }
+    async emitFortressMcDiagnostics(msg: FortressMcDiagnosticsMessage): Promise<void> {
+        console.log('[MockEventPublisher] emitFortressMcDiagnostics', JSON.stringify(msg));
     }
 }
 @Module({

@@ -25,6 +25,7 @@
     "migration:clickhouse": "npx ts-node -r tsconfig-paths/register src/libs/click-house/clickhouse.migrator.ts",
     "integration:setup": "ts-node -r tsconfig-paths/register src/scripts/setup-integration-test-env.ts",
     "verify:follow-trade": "ts-node -r tsconfig-paths/register src/scripts/verify-follow-trade.ts",
+    "listen:fortress-mc": "ts-node -r tsconfig-paths/register src/scripts/listen-fortress-mc-diagnostics.ts",
     "benchmark:e2e:slo": "ts-node -r tsconfig-paths/register src/scripts/benchmark-e2e-slo.ts",
     "benchmark:fortress:grid": "ts-node -r tsconfig-paths/register src/scripts/benchmark-fortress-grid.ts",
     "typechain:gen": "typechain --target ethers-v6 --out-dir src/contracts src/abis/**/*.json",
