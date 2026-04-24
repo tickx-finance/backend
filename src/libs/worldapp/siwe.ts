@@ -1,4 +1,5 @@
 import { MiniAppWalletAuthSuccessPayloadDto as MiniAppWalletAuthSuccessPayload } from '../../modules/auth/dto/miniapp-login.dto';
+import { env } from '../../config';
 import {
   Client,
   createPublicClient,
@@ -20,6 +21,18 @@ const NBF_TAG = 'Not Before: ';
 const RID_TAG = 'Request ID: ';
 const ERC_191_PREFIX = '\x19Ethereum Signed Message:\n';
 const EIP1271_MAGICVALUE = '0x1626ba7e';
+
+const createWorldAppPublicClient = (): Client => {
+  const rpcUrl = env.web3.rpcs[0] || env.web3.rpc;
+  if (!rpcUrl) {
+    throw new Error('Missing web3 RPC configuration for World App SIWE verification');
+  }
+
+  return createPublicClient({
+    chain: worldchain,
+    transport: http(rpcUrl),
+  }) as Client;
+};
 
 export type SiweMessage = {
   scheme?: string;
@@ -265,7 +278,7 @@ export const verifySiweMessageV1 = async (
 
   const provider =
     userProvider ||
-    createPublicClient({ chain: worldchain, transport: http() });
+    createWorldAppPublicClient();
   const signedMessage = `${ERC_191_PREFIX}${message.length}${message}`;
   const hashedMessage = hashMessage(signedMessage);
   const contract = getContract({
@@ -312,8 +325,7 @@ export const verifySiweMessageV2 = async (
     const walletContract = getContract({
       address: address as `0x${string}`,
       abi: SAFE_CONTRACT_ABI,
-      client: (userProvider ||
-        createPublicClient({ chain: worldchain, transport: http() })) as any,
+      client: (userProvider || createWorldAppPublicClient()) as any,
     });
     const hashedMessage = hashMessage(message);
     const res = await (walletContract as any).read.isValidSignature([
@@ -324,7 +336,10 @@ export const verifySiweMessageV2 = async (
       isValid: res === EIP1271_MAGICVALUE,
       siweMessageData,
     };
-  } catch {
-    throw new Error('Signature verification failed');
+  } catch (err: any) {
+    const message = typeof err?.message === 'string'
+      ? err.message
+      : 'Unknown RPC or contract verification error';
+    throw new Error(`Signature verification failed: ${message}`);
   }
 };
