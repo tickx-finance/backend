@@ -12,7 +12,8 @@ describe('SuggestedStrategyService', () => {
         });
 
         expect(result.volatilityRegime).toBe('low');
-        expect(result.cells.length).toBeGreaterThan(6);
+        expect(result.cells.length).toBeGreaterThanOrEqual(4);
+        expect(result.cells.length).toBeLessThanOrEqual(10);
         const minRow = Math.min(...result.cells.map((cell) => Number(cell.lowerPrice)));
         const maxRow = Math.max(...result.cells.map((cell) => Number(cell.lowerPrice)));
         expect(maxRow - minRow).toBeLessThanOrEqual(50);
@@ -33,6 +34,7 @@ describe('SuggestedStrategyService', () => {
 
     it('adds slight randomness across repeated runs', () => {
         const seen = new Set<string>();
+        const uniqueRowCounts = new Set<number>();
 
         for (let i = 0; i < 12; i += 1) {
             const result = service.buildSuggestedStrategy({
@@ -41,9 +43,11 @@ describe('SuggestedStrategyService', () => {
                 atrMean: 5,
             });
             seen.add(result.cells.map((cell) => `${cell.startTs}:${cell.lowerPrice}`).join('|'));
+            uniqueRowCounts.add(new Set(result.cells.map((cell) => cell.lowerPrice)).size);
         }
 
         expect(seen.size).toBeGreaterThan(1);
+        expect(uniqueRowCounts.size).toBeGreaterThan(1);
     });
 });
 

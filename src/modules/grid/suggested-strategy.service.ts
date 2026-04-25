@@ -56,7 +56,7 @@ function selectSuggestedCells(
     const centerRowIndex = Math.floor(rows.length / 2);
 
     const candidateRowOffsets = volatilityRegime === 'low'
-        ? [-1, 0, 1]
+        ? pickLowVolCandidateRowOffsets()
         : volatilityRegime === 'high'
             ? [-4, -2, 0, 2, 4]
             : [-3, -2, -1, 0, 1, 2, 3];
@@ -159,4 +159,15 @@ function shuffleInPlace<T>(items: T[]) {
         const j = Math.floor(Math.random() * (i + 1));
         [items[i], items[j]] = [items[j], items[i]];
     }
+}
+
+function pickLowVolCandidateRowOffsets(): number[] {
+    const variants = [
+        [0],
+        [-1, 0],
+        [0, 1],
+        [-1, 0, 1],
+    ];
+
+    return variants[Math.floor(Math.random() * variants.length)];
 }
