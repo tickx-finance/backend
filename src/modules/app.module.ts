@@ -19,6 +19,7 @@ import { RiskModule } from './risk/risk.module';
 import { DistributionModule } from './distribution/distribution.module';
 import { StrategyModule } from './strategy/strategy.module';
 import { OrderFollowModule } from './order-follow/order-follow.module';
+import { SkillDocsModule } from './skill-docs/skill-docs.module';
 // import { WorkerModule } from './worker/worker.module';
 
 @Module({
@@ -44,6 +45,7 @@ import { OrderFollowModule } from './order-follow/order-follow.module';
         RiskModule,
         DistributionModule,
         StrategyModule,
+        SkillDocsModule,
         // WorkerModule,
     ],
 })

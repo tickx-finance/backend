@@ -1,4 +1,4 @@
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -39,7 +39,12 @@ async function bootstrap() {
   app.useLogger(new Logger('APP'));
   const logger = new Logger('APP');
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: [
+      { path: 'skill.md', method: RequestMethod.GET },
+      { path: 'skills/:path(*)', method: RequestMethod.GET },
+    ],
+  });
   setMiddleware(app);
 
   if (process.env.NODE_ENV !== 'production') {
