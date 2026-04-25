@@ -6,41 +6,11 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GetDepositsDto } from './dto/get-deposits.dto';
 import { GetWithdrawalsDto } from './dto/get-withdrawals.dto';
 import { ExpireTimeoutDto } from './dto/expire-timeout.dto';
-import { ApiTags, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentChainSyncWorker } from './payment-chain-sync.worker';
-
-class DepositDto {
-    @ApiProperty({ type: String })
-    @IsString()
-    amount: string;
-    @ApiProperty({ type: String, required: false })
-    @IsOptional()
-    @IsString()
-    txHash?: string;
-    @ApiProperty({ type: Number, required: false })
-    @IsOptional()
-    @IsNumber()
-    logIndex?: number;
-}
-
-class WithdrawRequestDto {
-    @ApiProperty({ type: String })
-    @IsString()
-    amount: string;
-}
-
-class FinalizeWithdrawalDto {
-    @ApiProperty({ type: String })
-    @IsString()
-    sessionId: string;
-    @ApiProperty({ type: String })
-    @IsString()
-    txHash: string;
-    @ApiProperty({ type: Number })
-    @IsNumber()
-    logIndex: number;
-}
+import { DepositDto } from './dto/deposit.dto';
+import { FinalizeWithdrawalDto } from './dto/finalize-withdrawal.dto';
+import { WithdrawRequestDto } from './dto/withdraw-request.dto';
 
 @ApiBearerAuth()
 @ApiTags('payment')
