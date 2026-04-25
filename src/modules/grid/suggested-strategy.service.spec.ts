@@ -30,6 +30,21 @@ describe('SuggestedStrategyService', () => {
         const maxRow = Math.max(...result.cells.map((cell) => Number(cell.lowerPrice)));
         expect(maxRow - minRow).toBeGreaterThanOrEqual(100);
     });
+
+    it('adds slight randomness across repeated runs', () => {
+        const seen = new Set<string>();
+
+        for (let i = 0; i < 12; i += 1) {
+            const result = service.buildSuggestedStrategy({
+                cells: makeCells(),
+                sigma: 0.00003,
+                atrMean: 5,
+            });
+            seen.add(result.cells.map((cell) => `${cell.startTs}:${cell.lowerPrice}`).join('|'));
+        }
+
+        expect(seen.size).toBeGreaterThan(1);
+    });
 });
 
 function makeCells() {
