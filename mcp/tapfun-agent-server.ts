@@ -6,7 +6,7 @@ import { io } from 'socket.io-client';
 import {
   McpServer,
   WebStandardStreamableHTTPServerTransport,
-} from '@modelcontextprotocol/server';
+} from '../node_modules/@modelcontextprotocol/server/dist/index.mjs';
 import { z } from 'zod';
 
 const DEFAULT_APP_ORIGIN = process.env.TAPFUN_APP_ORIGIN ?? process.env.VERIFY_APP_ORIGIN ?? 'http://localhost:5001';
