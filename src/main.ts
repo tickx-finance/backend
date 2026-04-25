@@ -42,7 +42,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api', {
     exclude: [
       { path: 'skill.md', method: RequestMethod.GET },
-      { path: 'skills/:path(*)', method: RequestMethod.GET },
+      { path: 'skills/(.*)', method: RequestMethod.GET },
     ],
   });
   setMiddleware(app);

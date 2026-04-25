@@ -1,5 +1,5 @@
-import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, Get, NotFoundException, Req, Res } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 
@@ -17,8 +17,9 @@ export class SkillDocsController {
         res.sendFile(skillPath);
     }
 
-    @Get('skills/:path(*)')
-    getSkillAsset(@Param('path') path: string, @Res() res: Response) {
+    @Get('skills/*')
+    getSkillAsset(@Req() req: Request, @Res() res: Response) {
+        const path = req.params[0];
         const targetPath = resolve(SKILL_ROOT, path);
         if (!targetPath.startsWith(`${SKILL_ROOT}${sep}`) && targetPath !== SKILL_ROOT) {
             throw new NotFoundException('skill asset not found');
