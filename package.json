@@ -27,6 +27,8 @@
     "verify:follow-trade": "ts-node -r tsconfig-paths/register src/scripts/verify-follow-trade.ts",
     "listen:fortress-mc": "ts-node -r tsconfig-paths/register src/scripts/listen-fortress-mc-diagnostics.ts",
     "listen:suggested-strategy": "ts-node -r tsconfig-paths/register src/scripts/listen-suggested-strategy.ts",
+    "mcp:tapfun-agent": "ts-node --esm src/mcp/tapfun-agent-server.mts",
+    "start:mcp": "ts-node --esm src/mcp/tapfun-agent-server.mts",
     "benchmark:e2e:slo": "ts-node -r tsconfig-paths/register src/scripts/benchmark-e2e-slo.ts",
     "benchmark:fortress:grid": "ts-node -r tsconfig-paths/register src/scripts/benchmark-fortress-grid.ts",
     "typechain:gen": "typechain --target ethers-v6 --out-dir src/contracts src/abis/**/*.json",
@@ -34,10 +36,12 @@
     "mock:balance": "ts-node -r tsconfig-paths/register src/scripts/insert-mock-balance-data.ts"
   },
   "dependencies": {
+    "@cfworker/json-schema": "^4.1.1",
     "@clickhouse/client": "^1.11.2",
     "@fast-csv/format": "^5.0.2",
     "@grpc/grpc-js": "^1.12.5",
     "@grpc/proto-loader": "^0.7.13",
+    "@modelcontextprotocol/server": "^2.0.0-alpha.2",
     "@nestjs-modules/ioredis": "^2.0.2",
     "@nestjs/cli": "^10.4.7",
     "@nestjs/common": "^10.4.1",
