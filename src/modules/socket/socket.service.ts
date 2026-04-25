@@ -102,5 +102,8 @@ export function toFollowedOrderUpdateMessage(msg: OrderUpdateMessage): FollowedO
         status: msg.status,
         settledTimestamp: msg.settledTimestamp,
         settledWin: msg.settledWin,
+        settledPayout: msg.settledPayout,
+        settledBasePayout: msg.settledBasePayout,
+        settledBonusPayout: msg.settledBonusPayout,
     };
 }

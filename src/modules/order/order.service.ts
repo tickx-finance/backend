@@ -267,6 +267,18 @@ export class OrderService implements OnModuleInit {
         order.status = OrderStatus.SETTLED;
 
         this.logger.log(`Order settled: ${order.orderId}, Win: ${win}`);
+        const settledBasePayout = win
+            ? new BigNumber(order.amount)
+                .multipliedBy(order.rewardRate)
+                .decimalPlaces(9, BigNumber.ROUND_DOWN)
+                .toFixed()
+            : undefined;
+        const settledBonusPayout = win
+            ? new BigNumber(settlementBonus.settledPayout)
+                .minus(settledBasePayout ?? '0')
+                .decimalPlaces(9, BigNumber.ROUND_DOWN)
+                .toFixed()
+            : undefined;
         // 3. Fanout ws
         const wsMsg: OrderUpdateMessage = {
             orderId: order.orderId,
@@ -277,6 +289,9 @@ export class OrderService implements OnModuleInit {
             amount: order.amount,
             settledWin: win,
             settledTimestamp: settledTs,
+            settledPayout: win ? settlementBonus.settledPayout : undefined,
+            settledBasePayout,
+            settledBonusPayout,
         }
         await this.events.emitOrderUpdate(wsMsg)
 

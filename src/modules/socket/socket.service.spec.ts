@@ -31,6 +31,9 @@ describe('SocketService order update fanout', () => {
             status: OrderStatus.OPEN,
             settledTimestamp: undefined,
             settledWin: undefined,
+            settledPayout: undefined,
+            settledBasePayout: undefined,
+            settledBonusPayout: undefined,
         });
     });
 

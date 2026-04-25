@@ -65,6 +65,9 @@ export interface OrderUpdateMessage {
     status: OrderStatus;
     settledTimestamp?: number;
     settledWin?: boolean;
+    settledPayout?: string;
+    settledBasePayout?: string;
+    settledBonusPayout?: string;
 }
 
 export interface FollowedOrderUpdateMessage {
@@ -76,6 +79,9 @@ export interface FollowedOrderUpdateMessage {
     status: OrderStatus;
     settledTimestamp?: number;
     settledWin?: boolean;
+    settledPayout?: string;
+    settledBasePayout?: string;
+    settledBonusPayout?: string;
 }
 
 export interface DepositSuccessMessage {
