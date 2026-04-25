@@ -1,208 +1,216 @@
-# Tapl Backend
+# TickX Backend
 
-Backend service for the Tapl platform, built with NestJS, TypeScript, and EVM integrations.
+Backend for **TickX**, built with NestJS, TypeScript, PostgreSQL, Redis, websocket market streams, and EVM integrations.
 
-This repository contains the application backend and worker processes that power:
-- authentication and account flows
-- order, settlement, payment, and distribution logic
-- price, risk, and strategy modules
-- socket-based realtime updates
-- blockchain-facing integrations via Ether.js and generated contract bindings
+This repo currently contains:
+- the main API and socket server
+- a separate payment worker process
+- a separate MCP service for AI agents
+- migration-managed relational storage
+- Redis-backed runtime coordination and caching
 
-## Architecture Overview
+## Architecture
 
-- The main NestJS app exposes APIs and coordinates business logic.
-- A dedicated worker process handles background and listener-style jobs.
-- PostgreSQL stores core relational data and migration-managed schemas.
-- Redis supports caching and queue-like runtime coordination.
-- MinIO provides object storage for backend assets and files.
-- Kafka supports event-driven flows when enabled.
-- EVM integrations connect the backend to BASE-compatible onchain infrastructure.
+### Runtime topology
+
+| Process | Purpose | Default port |
+|---|---|---:|
+| `app` | User-facing REST API, websocket gateway, pricing, grid, orders, auth | `PORT` |
+| `payment-worker` | Deposit/withdraw chain sync and withdrawal expiry jobs | `WORKER_PORT` |
+| `mcp` | Agent-facing MCP HTTP server with `/mcp` and `/health` | `MCP_PORT` |
+
+### Data and external dependencies
+
+| Component | Role |
+|---|---|
+| PostgreSQL | Source of truth for orders, ledger history, payment history, auth metadata |
+| Redis | Hot-path balance state, ledger sequencing, caches, transient auth/session coordination |
+| Binance market data | Price ingestion for realtime price and grid generation |
+| EVM RPCs | Onchain payment and signing integrations |
 
 ```mermaid
 flowchart LR
-  A[Client Apps] --> B[NestJS API]
-  B --> C[PostgreSQL]
-  B --> D[Redis]
-  B --> E[MinIO]
-  B --> F[Kafka]
-  B --> G[EVM RPC / Smart Contracts]
-  H[Worker Service] --> C
-  H --> D
-  H --> F
-  H --> G
-  B --> I[Socket Gateway]
-  I --> A
+  U[Web / Mini App Users] --> APP[TickX App]
+  AG[AI Agent] --> MCP[MCP Service]
+  APP --> PG[(PostgreSQL)]
+  APP --> REDIS[(Redis)]
+  APP --> BINANCE[Binance WS / REST]
+  APP --> RPC[EVM RPCs]
+  WORKER[Payment Worker] --> PG
+  WORKER --> REDIS
+  WORKER --> RPC
+  MCP --> APP
+  MCP --> BINANCE
 ```
 
-## Backend Domains
+### Main backend domains
 
-| Domain | Responsibility |
+| Module | Responsibility |
 |---|---|
-| `auth` | Authentication, authorization, and access control |
-| `account` | User account management |
-| `order` | Order lifecycle handling |
-| `settlement` | Settlement processing and related jobs |
-| `payment` | Payment-related business flows |
-| `distribution` | Distribution and allocation flows |
-| `price` | Price ingestion and processing |
-| `risk` | Risk checks and policy logic |
-| `strategy` | Strategy configuration and execution support |
-| `socket` | Realtime communication |
-| `worker` | Background processing and listeners |
+| `auth` | Wallet login, mini-app login, JWT, WSS keys, auth profile metadata |
+| `account` | Balance state, ledger append, locking, settlement credits/debits |
+| `order` | Order placement, settlement, follow-trade fanout, human-verified win bonus |
+| `payment` | Deposit/withdraw session handling and payment domain logic |
+| `price` | Binance trade ingestion, price snapshots, OHLC aggregation |
+| `grid` | Fortress grid generation, suggested strategy, diagnostics streams |
+| `socket` | Realtime user, market, follow-trade, and diagnostics fanout |
+| `settlement` | Settlement batch read models and payout projection APIs |
+| `mcp` | Agent tool surface for login, funding, market reads, and betting |
 
-## Repository Structure
+## Feature Status
+
+| Feature | Status | Notes |
+|---|---|---|
+| Wallet auth | ✅ Done | Challenge-sign login, JWT, WSS key flow |
+| World mini-app auth | ✅ Done | Mini-app login + verify-human flow implemented |
+| Human verified win bonus | ✅ Done | Applied at settlement, persisted as realized fields |
+| Account balance locking in Redis | ✅ Done | Redis atomic flow with ledger sequencing |
+| Fortress grid engine default | ✅ Done | Fortress is the default grid generation path |
+| Suggested strategy stream | ✅ Done | Realtime stream with light randomness |
+| Follow trade subscriptions | ✅ Done | DB registration + target-room websocket fanout |
+| MCP agent betting surface | ✅ Done | Separate MCP process with `/mcp` and `/health` |
+| Payment worker | ✅ Done | Separate process for chain sync / expiry |
+| Additional agent skills / hosted skill docs | ✅ Done | `/skill.md` and `/skills/...` served by main app |
+| Long-term hardening / scale tuning | ⏳ To Do | Observability, access policies, scale tuning, cleanup |
+
+## Repository Layout
 
 ```text
 .
 ├── src/
-│   ├── adapters/
 │   ├── config/
 │   ├── libs/
 │   ├── migrations/
 │   ├── modules/
 │   ├── scripts/
-│   └── utils/
+│   ├── main.ts
+│   ├── payment-worker.ts
+│   └── mcp.ts
+├── skills/
 ├── system-design/
-├── benchmark-results/
 ├── docker-compose.yml
-├── docker.env.example
-├── README.example.md
+├── docker.env
+├── k8s-deployment.yml
 └── README.md
 ```
 
-## Project Setup
-
-This project is an EVM-based application utilizing Ether.js and integrating with BASE infrastructure. Below are the necessary steps to set up and run the project.
-
 ## Prerequisites
 
-Before setting up the project, ensure you have the following installed:
-- [Node.js](https://nodejs.org/) (Version 23.7.0 or later recommended)
-- [Yarn](https://yarnpkg.com/) (Package manager for dependencies)
-- [Docker](https://www.docker.com/) and Docker Compose
-- [TypeScript](https://www.typescriptlang.org/) (Installed globally)
+- Node.js
+- Yarn
+- Docker + Docker Compose
+- PostgreSQL and Redis, either via Docker Compose or external services
 
-## Environment Variables
+## Environment
 
-Ensure you have the following environment files in place:
+At minimum, configure:
 
-### `.env` File
 ```env
-NODE_ENV=production # local development production
-PORT='3001' # app port
-WORKER_PORT='3002' # listener port
-NETWORK=mainnet # testnet mainnet
+NODE_ENV=development
+PORT=5001
+WORKER_PORT=5002
+MCP_PORT=3010
 
-# postgres config
-POSTGRES_URL=postgres://root:1@localhost:5432/rwa
+POSTGRES_URL=postgres://...
+REDIS_URL=redis://...
 
-# redis config
-REDIS_URL=redis://default:foobared@localhost:6379/0
+JWT_SECRET=...
+RPCS=https://rpc1,https://rpc2
+CLAIM_SIGNER_PRIVATE_KEY=
 
-# minio config
-MINIO_ACCESS_KEY=development
-MINIO_SECRET_KEY=123456789
-BUCKET_NAME=development
-MINIO_HOST=localhost
-MINIO_PORT=32126
-
-# kafka config
-KAFKA_BROKER=localhost:39092
-KAFKA_TOPIC_PREFIX='local-rwa' # optional
-KAFKA_RUNNING_FLAG=true # true enable kafka and socket
-
-# rpc config
-RPC=
-
-JWT_SECRET=1
-
-APIFY_KEY=
-
-PRIVY_APP_ID=
-PRIVY_APP_SECRET=
-
-# admin private key
-ADMIN_PRIVATE_KEY=
+QUOTE_ASSET_ADDRESS=
+RESERVE_POOL_ADDRESS=
 ```
 
-### `docker.env` File
-```env
-POSTGRES_USER=root
-POSTGRES_PASSWORD=1
-POSTGRES_DB=viral_bot
-POSTGRES_PORT=5432
+For local Docker dependencies, use `docker.env` for PostgreSQL and Redis container settings.
 
-REDIS_PASSWORD=foobared
-REDIS_PORT=6379
+## Local Setup
 
-MINIO_ROOT_USER=development
-MINIO_ROOT_PASSWORD=123456789
-MINIO_PORT=32126
-MINIO_CONSOLE_PORT=9001
+### 1. Start infra
 
-ZOOKEEPER_PORT=2181
-
-KAFKA_PORT=39092
-KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:39092
-
-CLICKHOUSE_DB=viral_bot
-CLICKHOUSE_USER=default
-CLICKHOUSE_PASSWORD=1
-CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
-CLICKHOUSE_PORT_HTTP=8123
-CLICKHOUSE_PORT_TCP=9000
-```
-## Running the Project
-
-### Step 1: Start Required Services with Docker Compose
-Ensure you have [Docker](https://www.docker.com/) installed. Run the following command to start the required services:
-```sh
+```bash
 docker compose --env-file docker.env up -d
 ```
 
-### Step 2: Install Dependencies
-Run the following command to install project dependencies:
-```sh
+### 2. Install dependencies
+
+```bash
 yarn install
 ```
 
-### Step 3: Generate TypeScript Bindings for Smart Contracts
-```sh
-yarn typechain:gen
-```
+### 3. Run migrations
 
-### Step 4: Generate Migrations
-Run this command to generate database migrations:
-```sh
-yarn migration:generate
-```
-
-### Step 5: Apply Migrations
-Run the following command to apply database migrations:
-```sh
+```bash
 yarn migration:up
 ```
 
-### Step 6: Start the Application
-To start the main application, run:
-```sh
+### 4. Start processes
+
+Main app:
+
+```bash
 yarn dev
 ```
 
-### Step 7: Start the Worker Service
-To start the worker service, run:
-```sh
+Payment worker:
+
+```bash
 yarn dev:worker
 ```
 
+MCP service:
+
+```bash
+yarn dev:mcp
+```
+
+## Production Commands
+
+Main app:
+
+```bash
+node dist/main.js
+```
+
+Payment worker:
+
+```bash
+node dist/payment-worker.js
+```
+
+MCP service:
+
+```bash
+node dist/mcp.js
+```
+
+## Important Endpoints
+
+### Main app
+
+- Health: `/api/health-check`
+- Swagger: `/swagger`
+- API prefix: `/api/...`
+
+### Payment worker
+
+- Health: `/health`
+
+### MCP service
+
+- Health: `/health`
+- MCP: `/mcp`
+
+MCP is deployed on a separate host from the main app API.
+
 ## Notes
 
-- Ensure all environment variables are correctly configured before starting the services.
-- `MINIO_ROOT_PASSWORD` must be at least 8 characters.
-- `RPC` must be set to a valid RPC endpoint.
-- If you encounter any issues with Docker services, try restarting them using:
-  ```sh
-  docker compose down && docker compose --env-file docker.env up -d
-  ```
-- If database migrations fail, check database connectivity and retry migration commands.
+- For hackathon/demo mode, payment workers can be disabled and debug payment flows can be used instead.
+- `grid_update` cells are signed; clients must use the emitted `gridSignature` unchanged.
+- `order_update` settle payloads include realized payout breakdown when a win occurs:
+  - `settledPayout`
+  - `settledBasePayout`
+  - `settledBonusPayout`
+- Skill docs for agents are hosted by the main app:
+  - `/skill.md`
+  - `/skills/...`
